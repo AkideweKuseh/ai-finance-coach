@@ -5,11 +5,13 @@
  */
 
 import React from "react";
+import { Platform } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, useThemedColors } from "../theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Import screens (placeholders - will be created)
 import AuthNavigator from "./AuthNavigator";
@@ -30,6 +32,11 @@ const MainTab = createBottomTabNavigator<MainTabParamList>();
  */
 const MainTabNavigator = () => {
   const themedColors = useThemedColors();
+  const insets = useSafeAreaInsets();
+  const androidBottomInset = Platform.OS === "android" ? insets.bottom : 0;
+  const tabBarBaseHeight = 68;
+  const tabBarPaddingBottom = 12 + androidBottomInset;
+  const tabBarHeight = tabBarBaseHeight + androidBottomInset;
   return (
     <MainTab.Navigator
       screenOptions={{
@@ -40,9 +47,9 @@ const MainTabNavigator = () => {
           backgroundColor: themedColors.surface,
           borderTopColor: themedColors.border,
           borderTopWidth: 1,
-          paddingBottom: 12,
+          paddingBottom: tabBarPaddingBottom,
           paddingTop: 10,
-          height: 68,
+          height: tabBarHeight,
           elevation: 0,
           shadowOpacity: 0,
           position: "absolute",

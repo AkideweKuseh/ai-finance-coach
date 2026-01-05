@@ -23,7 +23,9 @@ export const ScreenContainer = ({
   style,
   backgroundColor,
   withKeyboardAvoidingView = true,
-  edges = ["top", "left", "right"],
+  edges = Platform.OS === "android"
+    ? ["top", "left", "right", "bottom"]
+    : ["top", "left", "right"],
 }: ScreenContainerProps) => {
   const themedColors = useThemedColors();
   const bgColor = backgroundColor || themedColors.background;

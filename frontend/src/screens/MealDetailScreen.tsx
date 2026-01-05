@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   colors,
   spacing,
@@ -40,6 +41,7 @@ interface Step {
 const MealDetailScreen = () => {
   const navigation = useNavigation();
   const themedColors = useThemedColors();
+  const insets = useSafeAreaInsets();
   const [ingredients, setIngredients] = useState<Ingredient[]>([
     { name: "Chicken Breast", amount: "2 (400g)", checked: true },
     { name: "Fresh Lemon", amount: "1 whole", checked: false },
@@ -442,6 +444,7 @@ const MealDetailScreen = () => {
           {
             backgroundColor: themedColors.background,
             borderTopColor: themedColors.border,
+            paddingBottom: insets.bottom + spacing.screenPadding,
           },
         ]}
       >

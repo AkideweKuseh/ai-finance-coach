@@ -76,9 +76,7 @@ export const Button = ({
     <TouchableOpacity
       style={[
         styles.baseButton,
-        ...(Array.isArray(getButtonStyle())
-          ? getButtonStyle()
-          : [getButtonStyle()]),
+        getButtonStyle(),
         disabled && styles.disabledButton,
         style,
       ]}
@@ -97,13 +95,7 @@ export const Button = ({
         />
       ) : (
         <Text
-          style={[
-            styles.baseText,
-            ...(Array.isArray(getTextStyle())
-              ? getTextStyle()
-              : [getTextStyle()]),
-            customTextStyle,
-          ]}
+          style={[styles.baseText, getTextStyle(), customTextStyle]}
           allowFontScaling={false}
         >
           {title}

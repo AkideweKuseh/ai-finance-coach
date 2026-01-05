@@ -22,7 +22,8 @@
         "backgroundColor": "#2f7f34"
       },
       "package": "com.aidietconsultant.app",
-      "permissions": ["CAMERA"]
+      "permissions": ["CAMERA"],
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "favicon": "./assets/favicon.png"

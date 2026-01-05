@@ -19,6 +19,9 @@ export const useThemedColors = () => {
     surface: isDark ? colors.surfaceDark : colors.surfaceLight,
     surfaceAlt: isDark ? colors.surfaceDarkLight : colors.gray[100],
 
+    // Backwards-compatible alias used across screens
+    surfaceLight: isDark ? colors.surfaceDarkLight : colors.gray[100],
+
     // Text colors
     textPrimary: isDark ? colors.textPrimaryDark : colors.textPrimaryLight,
     textSecondary: isDark

@@ -15,7 +15,9 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   colors,
   spacing,
@@ -269,6 +271,9 @@ const QuickReply = ({
 
 const AIChatScreen = () => {
   const themedColors = useThemedColors();
+  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
+  const enableFocusedFooterUI = Platform.OS === "ios";
   const [inputText, setInputText] = useState("");
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [messages] = useState<Message[]>([
@@ -304,7 +309,10 @@ const AIChatScreen = () => {
   ]);
 
   return (
-    <ScreenContainer backgroundColor={themedColors.background}>
+    <ScreenContainer
+      backgroundColor={themedColors.background}
+      withKeyboardAvoidingView={Platform.OS === "ios"}
+    >
       {/* Header */}
       <View
         style={[styles.header, { backgroundColor: themedColors.background }]}
@@ -351,6 +359,7 @@ const AIChatScreen = () => {
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.timestamp}>
           <Text style={styles.timestampText}>Today, 10:23 AM</Text>
@@ -369,15 +378,21 @@ const AIChatScreen = () => {
       <View
         style={[
           styles.bottomContainer,
-          isInputFocused && styles.bottomContainerExpanded,
+          enableFocusedFooterUI &&
+            isInputFocused &&
+            styles.bottomContainerExpanded,
           {
             backgroundColor: themedColors.background,
             borderTopColor: themedColors.border,
+            marginBottom:
+              Platform.OS === "android"
+                ? Math.max(0, tabBarHeight - insets.bottom)
+                : 0,
           },
         ]}
       >
         {/* Quick Reply Chips - Only show when focused */}
-        {isInputFocused && (
+        {enableFocusedFooterUI && isInputFocused && (
           <ScrollView
             horizontal
             style={styles.quickRepliesContainer}
@@ -422,8 +437,16 @@ const AIChatScreen = () => {
               onChangeText={setInputText}
               multiline
               textAlignVertical="center"
-              onFocus={() => setIsInputFocused(true)}
-              onBlur={() => setIsInputFocused(false)}
+              onFocus={() => {
+                if (enableFocusedFooterUI) {
+                  setIsInputFocused(true);
+                }
+              }}
+              onBlur={() => {
+                if (enableFocusedFooterUI) {
+                  setIsInputFocused(false);
+                }
+              }}
             />
             <TouchableOpacity style={styles.micButton}>
               <Ionicons
@@ -508,7 +531,7 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     padding: spacing.md,
-    paddingBottom: 120,
+    paddingBottom: Platform.OS === "android" ? spacing.md : 120,
     gap: spacing.screenPadding,
   },
   timestamp: {
@@ -757,8 +780,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.display,
   },
   bottomContainer: {
-    position: "absolute",
-    bottom: 68,
+    // On some Android devices (notably some Samsung builds), an absolutely-positioned
+    // input footer can cause the keyboard to flicker (open then immediately close).
+    // Keep the floating layout on iOS, but use a normal footer on Android.
+    position: Platform.OS === "ios" ? "absolute" : "relative",
+    bottom: Platform.OS === "ios" ? 68 : 0,
     left: 0,
     right: 0,
     backgroundColor: colors.backgroundDark,
