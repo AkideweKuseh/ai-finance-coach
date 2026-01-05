@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "AI Diet Consultant",
+    "slug": "ai-diet-consultant",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2f7f34"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aidietconsultant.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2f7f34"
+      },
+      "package": "com.aidietconsultant.app",
+      "permissions": ["CAMERA"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-secure-store"],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    },
+    "sdkVersion": "54.0.0"
+  }
+}
