@@ -4,6 +4,14 @@
 
 import apiClient, { handleApiError } from "./client";
 import { UserLoginData, UserRegistrationData, User } from "../types/user";
+import { useAuthStore } from "../stores/authStore";
+
+type ApiResponse<T> = {
+  success: boolean;
+  message?: string;
+  data?: T;
+  errors?: unknown;
+};
 
 export interface AuthResponse {
   user: User;
@@ -23,8 +31,16 @@ export const register = async (
   data: UserRegistrationData
 ): Promise<AuthResponse> => {
   try {
-    const response = await apiClient.post<AuthResponse>("/auth/register", data);
-    return response.data;
+    const response = await apiClient.post<ApiResponse<AuthResponse>>(
+      "/auth/register",
+      data
+    );
+
+    if (!response.data?.data) {
+      throw new Error(response.data?.message || "Invalid server response");
+    }
+
+    return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }
@@ -35,8 +51,16 @@ export const register = async (
  */
 export const login = async (data: UserLoginData): Promise<AuthResponse> => {
   try {
-    const response = await apiClient.post<AuthResponse>("/auth/login", data);
-    return response.data;
+    const response = await apiClient.post<ApiResponse<AuthResponse>>(
+      "/auth/login",
+      data
+    );
+
+    if (!response.data?.data) {
+      throw new Error(response.data?.message || "Invalid server response");
+    }
+
+    return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }
@@ -49,13 +73,18 @@ export const refreshAccessToken = async (
   refreshToken: string
 ): Promise<RefreshTokenResponse> => {
   try {
-    const response = await apiClient.post<RefreshTokenResponse>(
+    const response = await apiClient.post<ApiResponse<RefreshTokenResponse>>(
       "/auth/refresh",
       {
         refreshToken,
       }
     );
-    return response.data;
+
+    if (!response.data?.data) {
+      throw new Error(response.data?.message || "Invalid server response");
+    }
+
+    return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }
@@ -66,10 +95,12 @@ export const refreshAccessToken = async (
  */
 export const logout = async (): Promise<void> => {
   try {
-    await apiClient.post("/auth/logout");
+    const { refreshToken } = useAuthStore.getState();
+    await apiClient.post("/auth/logout", { refreshToken });
   } catch (error) {
-    // Even if logout fails on server, we'll clear local tokens
-    console.error("Logout error:", error);
+    // Best-effort: logout can fail if access token is expired; always clear local tokens.
+    // Keep noise low in production/dev.
+    return;
   }
 };
 

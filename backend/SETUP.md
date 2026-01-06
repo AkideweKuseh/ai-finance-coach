@@ -53,7 +53,7 @@ OPENAI_MODEL=gpt-4-turbo-preview
 
 # Google Gemini Configuration (if using Gemini)
 GEMINI_API_KEY=your-actual-gemini-api-key-here
-GEMINI_MODEL=gemini-pro
+GEMINI_MODEL=gemini-2.5-flash
 
 # CORS Origins (adjust for your frontend URL)
 CORS_ORIGINS=http://localhost:19000,http://localhost:19001,http://localhost:19002

@@ -3,7 +3,7 @@
  * Chat interface with AI nutrition assistant
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,11 +13,14 @@ import {
   TouchableOpacity,
   Image,
   Platform,
+  Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Clipboard from "expo-clipboard";
+import Markdown from "react-native-markdown-display";
 import {
   colors,
   spacing,
@@ -27,6 +30,8 @@ import {
   useThemedColors,
 } from "../theme";
 import { ScreenContainer } from "../components/common/ScreenContainer";
+import * as chatApi from "../api/chat";
+import { ChatMessage, ChatConversation } from "../types/chat";
 
 interface Message {
   id: string;
@@ -47,8 +52,95 @@ interface MealCardData {
   tip?: string;
 }
 
+const toPlainText = (value: string) => {
+  // Best-effort conversion so copying doesn't include markdown tokens.
+  // (Display uses a markdown renderer; this is just for clipboard.)
+  return (value || "")
+    .replace(/```[\s\S]*?```/g, (block) =>
+      block.replace(/```[a-zA-Z0-9_-]*\n?|```/g, "").trim()
+    )
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s*>\s?/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "• ")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/\r\n/g, "\n")
+    .trim();
+};
+
+const copyMessageText = async (value: string) => {
+  try {
+    await Clipboard.setStringAsync(toPlainText(value));
+  } catch {
+    // best-effort
+  }
+};
+
 const AIMessage = ({ message }: { message: Message }) => {
   const themedColors = useThemedColors();
+  const markdownStyle = useMemo(
+    () => ({
+      body: {
+        color: themedColors.textPrimary,
+        fontFamily: typography.fontFamily.body,
+        fontSize: styles.aiText.fontSize,
+        lineHeight: styles.aiText.lineHeight,
+      },
+      paragraph: { marginTop: 0, marginBottom: 0 },
+      text: {
+        color: themedColors.textPrimary,
+        fontFamily: typography.fontFamily.body,
+        fontSize: styles.aiText.fontSize,
+        lineHeight: styles.aiText.lineHeight,
+      },
+      heading1: {
+        fontSize: styles.aiText.fontSize,
+        lineHeight: styles.aiText.lineHeight,
+      },
+      heading2: {
+        fontSize: styles.aiText.fontSize,
+        lineHeight: styles.aiText.lineHeight,
+      },
+      heading3: {
+        fontSize: styles.aiText.fontSize,
+        lineHeight: styles.aiText.lineHeight,
+      },
+      heading4: {
+        fontSize: styles.aiText.fontSize,
+        lineHeight: styles.aiText.lineHeight,
+      },
+      heading5: {
+        fontSize: styles.aiText.fontSize,
+        lineHeight: styles.aiText.lineHeight,
+      },
+      heading6: {
+        fontSize: styles.aiText.fontSize,
+        lineHeight: styles.aiText.lineHeight,
+      },
+      strong: { fontFamily: typography.fontFamily.display },
+      em: { fontStyle: "italic" as const },
+      link: { color: colors.primary },
+      code_inline: {
+        fontFamily: typography.fontFamily.body,
+        backgroundColor: themedColors.background,
+      },
+      code_block: {
+        fontFamily: typography.fontFamily.body,
+        backgroundColor: themedColors.background,
+      },
+      fence: {
+        fontFamily: typography.fontFamily.body,
+        backgroundColor: themedColors.background,
+      },
+    }),
+    [themedColors]
+  );
+
   return (
     <View style={styles.messageContainer}>
       <View style={styles.aiAvatarContainer}>
@@ -62,16 +154,19 @@ const AIMessage = ({ message }: { message: Message }) => {
         >
           NutriBot
         </Text>
-        <View
-          style={[
-            styles.aiBubble,
-            { backgroundColor: themedColors.surfaceLight },
-          ]}
+        <Pressable
+          onLongPress={() => copyMessageText(message.text)}
+          delayLongPress={250}
         >
-          <Text style={[styles.aiText, { color: themedColors.textPrimary }]}>
-            {message.text}
-          </Text>
-        </View>
+          <View
+            style={[
+              styles.aiBubble,
+              { backgroundColor: themedColors.surfaceLight },
+            ]}
+          >
+            <Markdown style={markdownStyle}>{message.text}</Markdown>
+          </View>
+        </Pressable>
         {message.mealCard && <MealCard data={message.mealCard} />}
       </View>
     </View>
@@ -80,6 +175,64 @@ const AIMessage = ({ message }: { message: Message }) => {
 
 const UserMessage = ({ message }: { message: Message }) => {
   const themedColors = useThemedColors();
+  const markdownStyle = useMemo(
+    () => ({
+      body: {
+        color: "#FFFFFF",
+        fontFamily: typography.fontFamily.body,
+        fontSize: styles.userText.fontSize,
+        lineHeight: styles.userText.lineHeight,
+      },
+      paragraph: { marginTop: 0, marginBottom: 0 },
+      text: {
+        color: "#FFFFFF",
+        fontFamily: typography.fontFamily.body,
+        fontSize: styles.userText.fontSize,
+        lineHeight: styles.userText.lineHeight,
+      },
+      heading1: {
+        fontSize: styles.userText.fontSize,
+        lineHeight: styles.userText.lineHeight,
+      },
+      heading2: {
+        fontSize: styles.userText.fontSize,
+        lineHeight: styles.userText.lineHeight,
+      },
+      heading3: {
+        fontSize: styles.userText.fontSize,
+        lineHeight: styles.userText.lineHeight,
+      },
+      heading4: {
+        fontSize: styles.userText.fontSize,
+        lineHeight: styles.userText.lineHeight,
+      },
+      heading5: {
+        fontSize: styles.userText.fontSize,
+        lineHeight: styles.userText.lineHeight,
+      },
+      heading6: {
+        fontSize: styles.userText.fontSize,
+        lineHeight: styles.userText.lineHeight,
+      },
+      strong: { fontFamily: typography.fontFamily.display },
+      em: { fontStyle: "italic" as const },
+      link: { color: "#FFFFFF" },
+      code_inline: {
+        fontFamily: typography.fontFamily.body,
+        backgroundColor: themedColors.background,
+      },
+      code_block: {
+        fontFamily: typography.fontFamily.body,
+        backgroundColor: themedColors.background,
+      },
+      fence: {
+        fontFamily: typography.fontFamily.body,
+        backgroundColor: themedColors.background,
+      },
+    }),
+    [themedColors]
+  );
+
   return (
     <View style={styles.userMessageContainer}>
       <View style={styles.userMessageContent}>
@@ -88,9 +241,14 @@ const UserMessage = ({ message }: { message: Message }) => {
         >
           You
         </Text>
-        <View style={styles.userBubble}>
-          <Text style={styles.userText}>{message.text}</Text>
-        </View>
+        <Pressable
+          onLongPress={() => copyMessageText(message.text)}
+          delayLongPress={250}
+        >
+          <View style={styles.userBubble}>
+            <Markdown style={markdownStyle}>{message.text}</Markdown>
+          </View>
+        </Pressable>
       </View>
       <View style={styles.userAvatar}>
         <Text style={styles.userAvatarText}>ME</Text>
@@ -276,37 +434,130 @@ const AIChatScreen = () => {
   const enableFocusedFooterUI = Platform.OS === "ios";
   const [inputText, setInputText] = useState("");
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [messages] = useState<Message[]>([
-    {
-      id: "1",
-      text: "Good morning! Ready to plan your lunch? 🥗 Keeping your energy levels high is our goal today!",
-      isAI: true,
-      timestamp: "10:23 AM",
-    },
-    {
-      id: "2",
-      text: "I have chicken and avocado. What can I make?",
-      isAI: false,
-      timestamp: "10:24 AM",
-    },
-    {
-      id: "3",
-      text: "How about a Chicken Avocado Salad? 🥗 It's fresh, quick to make, and packs a protein punch! Here's a quick breakdown:",
-      isAI: true,
-      timestamp: "10:24 AM",
-      mealCard: {
-        title: "Chicken Avocado Salad",
-        calories: 450,
-        prepTime: "15 min prep",
-        protein: 40,
-        carbs: 12,
-        fat: 15,
-        imageUrl:
-          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400",
-        tip: "Add a squeeze of lemon for zest without extra calories! 🍋",
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [conversation, setConversation] = useState<ChatConversation | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const formatTime = (value?: string | Date) => {
+    if (!value) return "";
+    const d = typeof value === "string" ? new Date(value) : value;
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const mapMealCard = (metadata?: ChatMessage["metadata"]) => {
+    const suggestion = metadata?.mealSuggestion;
+    if (!suggestion) return undefined;
+
+    return {
+      title: suggestion.mealName,
+      calories: suggestion.calories,
+      prepTime: "",
+      protein: suggestion.macros.protein,
+      carbs: suggestion.macros.carbs,
+      fat: suggestion.macros.fat,
+      imageUrl: suggestion.mealImage || "https://via.placeholder.com/400",
+      tip: undefined,
+    } as MealCardData;
+  };
+
+  const toUiMessage = (msg: ChatMessage): Message => {
+    const id = msg._id || `${msg.role}-${new Date(msg.timestamp).getTime()}`;
+    return {
+      id,
+      text: msg.content,
+      isAI: msg.role === "assistant",
+      timestamp: formatTime(msg.timestamp),
+      mealCard: mapMealCard(msg.metadata),
+    };
+  };
+
+  const fallbackMessages = useMemo<Message[]>(
+    () => [
+      {
+        id: "fallback-1",
+        text: "Hi! Ask me about meals, macros, or what to cook with what you have.",
+        isAI: true,
+        timestamp: "",
       },
-    },
-  ]);
+    ],
+    []
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadConversation = async () => {
+      setIsLoading(true);
+      try {
+        const conv = await chatApi.getConversation();
+        if (cancelled) return;
+
+        setConversation(conv?._id ? conv : null);
+        const mapped = (conv?.messages || []).map(toUiMessage);
+        setMessages(mapped.length > 0 ? mapped : fallbackMessages);
+      } catch (e: any) {
+        if (cancelled) return;
+
+        setMessages([
+          {
+            id: "error-load",
+            text: e?.message || "Could not load conversation.",
+            isAI: true,
+            timestamp: "",
+          },
+          ...fallbackMessages,
+        ]);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadConversation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fallbackMessages]);
+
+  const handleSend = async () => {
+    const content = inputText.trim();
+    if (!content || isSending) return;
+
+    setInputText("");
+    setIsSending(true);
+
+    const optimistic: Message = {
+      id: `local-${Date.now()}`,
+      text: content,
+      isAI: false,
+      timestamp: formatTime(new Date()),
+    };
+
+    setMessages((prev) => [...prev, optimistic]);
+
+    try {
+      const response = await chatApi.sendMessage({ content });
+      const assistant = toUiMessage(response.message);
+      setMessages((prev) => [...prev, assistant]);
+    } catch (e: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `error-send-${Date.now()}`,
+          text: e?.message || "I hit an error sending that. Please try again.",
+          isAI: true,
+          timestamp: "",
+        },
+      ]);
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   return (
     <ScreenContainer
@@ -356,13 +607,19 @@ const AIChatScreen = () => {
 
       {/* Messages */}
       <ScrollView
+        ref={scrollRef}
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() =>
+          scrollRef.current?.scrollToEnd({ animated: true })
+        }
       >
         <View style={styles.timestamp}>
-          <Text style={styles.timestampText}>Today, 10:23 AM</Text>
+          <Text style={styles.timestampText}>
+            {isLoading ? "Loading…" : "Today"}
+          </Text>
         </View>
 
         {messages.map((message) =>
@@ -457,7 +714,11 @@ const AIChatScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.sendButton}>
+          <TouchableOpacity
+            style={styles.sendButton}
+            onPress={handleSend}
+            disabled={isSending || !inputText.trim()}
+          >
             <Ionicons name="send" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -787,6 +1048,8 @@ const styles = StyleSheet.create({
     bottom: Platform.OS === "ios" ? 68 : 0,
     left: 0,
     right: 0,
+    zIndex: 20,
+    elevation: 20,
     backgroundColor: colors.backgroundDark,
     paddingTop: spacing.xs,
     paddingBottom: spacing.xs,

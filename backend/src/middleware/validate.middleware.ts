@@ -45,18 +45,23 @@ export const registerValidation = [
     .isLength({ min: 2, max: 50 })
     .withMessage("Name must be between 2 and 50 characters"),
   body("profile.age")
+    .optional()
     .isInt({ min: 13, max: 120 })
     .withMessage("Age must be between 13 and 120"),
   body("profile.height")
+    .optional()
     .isFloat({ min: 100, max: 300 })
     .withMessage("Height must be between 100 and 300 cm"),
   body("profile.weight")
+    .optional()
     .isFloat({ min: 30, max: 300 })
     .withMessage("Weight must be between 30 and 300 kg"),
   body("profile.goal")
+    .optional()
     .isIn(["lose", "maintain", "gain"])
     .withMessage("Goal must be lose, maintain, or gain"),
   body("profile.activityLevel")
+    .optional()
     .isIn(["sedentary", "light", "moderate", "active", "athlete"])
     .withMessage("Invalid activity level"),
 ];

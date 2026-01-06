@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -17,6 +18,7 @@ import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
 import { SocialButton } from "../components/common/SocialButton";
 import { Ionicons } from "@expo/vector-icons";
+import * as authApi from "../api/auth";
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, "SignUp">;
 
@@ -33,33 +35,31 @@ const SignUpScreen = () => {
 
   const handleSignUp = async () => {
     if (!email || !password || !name) {
+      Alert.alert(
+        "Missing info",
+        "Please enter your name, email, and password."
+      );
       return;
     }
 
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(async () => {
-      const mockUser = {
-        id: "1",
-        email: email,
-        name: name,
-        role: "user",
-        profile: {
-          age: 30,
-          gender: "female",
-          height: 165,
-          weight: 60,
-          activityLevel: "moderate",
-          dietaryPreferences: [],
-          healthGoals: [],
-        },
-      };
+    try {
+      const { user, accessToken, refreshToken } = await authApi.register({
+        name,
+        email,
+        password,
+        profile: {},
+      });
 
-      setUser(mockUser as any);
-      await setTokens("mock-access-token", "mock-refresh-token");
+      setUser(user);
+      await setTokens(accessToken, refreshToken);
+      // Navigation will happen automatically via AppNavigator when isAuthenticated becomes true
+    } catch (error: any) {
+      Alert.alert("Sign up failed", error?.message || "Please try again.");
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (

@@ -3,7 +3,7 @@
  * Main home screen showing daily calorie progress, macros, and recommendations
  */
 
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
 } from "../theme";
 import Svg, { Circle } from "react-native-svg";
 import { ScreenContainer } from "../components/common/ScreenContainer";
+import { useUserStore } from "../stores/userStore";
 
 interface MacroBarProps {
   label: string;
@@ -180,9 +181,48 @@ const MealCard = ({
 
 const DashboardScreen = () => {
   const themedColors = useThemedColors();
-  const currentCalories = 1250;
-  const targetCalories = 12000;
-  const progress = (currentCalories / targetCalories) * 100;
+  const { user, dailySummary } = useUserStore();
+
+  const firstName = user?.name?.split(" ")?.[0] || "there";
+
+  const targetCalories = user?.profile?.dailyCalorieGoal ?? 2000;
+  const currentCalories = dailySummary?.caloriesConsumed ?? 0;
+  const progress = Math.min(
+    100,
+    Math.max(0, (currentCalories / Math.max(1, targetCalories)) * 100)
+  );
+
+  const macroUi = useMemo(() => {
+    const macroGoals = user?.profile?.macroGoals;
+    const consumed = dailySummary?.macrosConsumed;
+    const remaining = dailySummary?.macrosRemaining;
+
+    const proteinGoal = macroGoals?.protein ?? 0;
+    const carbsGoal = macroGoals?.carbs ?? 0;
+    const fatGoal = macroGoals?.fat ?? 0;
+
+    const proteinConsumed = consumed?.protein ?? 0;
+    const carbsConsumed = consumed?.carbs ?? 0;
+    const fatConsumed = consumed?.fat ?? 0;
+
+    const proteinLeft =
+      remaining?.protein ?? Math.max(0, proteinGoal - proteinConsumed);
+    const carbsLeft =
+      remaining?.carbs ?? Math.max(0, carbsGoal - carbsConsumed);
+    const fatLeft = remaining?.fat ?? Math.max(0, fatGoal - fatConsumed);
+
+    const pct = (value: number, goal: number) =>
+      Math.min(100, Math.max(0, (value / Math.max(1, goal)) * 100));
+
+    return {
+      protein: {
+        left: proteinLeft,
+        progress: pct(proteinConsumed, proteinGoal),
+      },
+      carbs: { left: carbsLeft, progress: pct(carbsConsumed, carbsGoal) },
+      fat: { left: fatLeft, progress: pct(fatConsumed, fatGoal) },
+    };
+  }, [user, dailySummary]);
 
   // Calculate circle progress (circumference = 2πr, r=80)
   const radius = 80;
@@ -231,7 +271,7 @@ const DashboardScreen = () => {
             {getCurrentDate()}
           </Text>
           <Text style={[styles.greeting, { color: themedColors.textPrimary }]}>
-            Good morning, Alex! 🥑
+            Good morning, {firstName}! 🥑
           </Text>
         </View>
         <View
@@ -307,12 +347,20 @@ const DashboardScreen = () => {
           <View style={styles.macrosContainer}>
             <MacroBar
               label="Protein"
-              remaining="45g left"
-              progress={65}
+              remaining={`${macroUi.protein.left}g left`}
+              progress={macroUi.protein.progress}
               isProtein
             />
-            <MacroBar label="Carbs" remaining="120g left" progress={40} />
-            <MacroBar label="Fat" remaining="20g left" progress={75} />
+            <MacroBar
+              label="Carbs"
+              remaining={`${macroUi.carbs.left}g left`}
+              progress={macroUi.carbs.progress}
+            />
+            <MacroBar
+              label="Fat"
+              remaining={`${macroUi.fat.left}g left`}
+              progress={macroUi.fat.progress}
+            />
           </View>
         </View>
 

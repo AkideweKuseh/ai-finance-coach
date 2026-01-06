@@ -10,13 +10,25 @@ import {
   MealSuggestion,
 } from "../types/meal";
 
+type ApiResponse<T> = {
+  success: boolean;
+  message?: string;
+  data?: T;
+  errors?: unknown;
+};
+
 /**
  * Get all available meals
  */
 export const getMeals = async (): Promise<Meal[]> => {
   try {
-    const response = await apiClient.get<Meal[]>("/meals");
-    return response.data;
+    const response = await apiClient.get<ApiResponse<Meal[]>>("/meals");
+
+    if (!response.data?.data) {
+      throw new Error(response.data?.message || "Invalid server response");
+    }
+
+    return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }
@@ -27,8 +39,13 @@ export const getMeals = async (): Promise<Meal[]> => {
  */
 export const getMealById = async (id: string): Promise<Meal> => {
   try {
-    const response = await apiClient.get<Meal>(`/meals/${id}`);
-    return response.data;
+    const response = await apiClient.get<ApiResponse<Meal>>(`/meals/${id}`);
+
+    if (!response.data?.data) {
+      throw new Error(response.data?.message || "Invalid server response");
+    }
+
+    return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }
@@ -40,8 +57,16 @@ export const getMealById = async (id: string): Promise<Meal> => {
 export const getMealLogs = async (date?: string): Promise<MealLog[]> => {
   try {
     const params = date ? { date } : {};
-    const response = await apiClient.get<MealLog[]>("/meals/logs", { params });
-    return response.data;
+    const response = await apiClient.get<ApiResponse<MealLog[]>>(
+      "/meals/logs",
+      { params }
+    );
+
+    if (!response.data?.data) {
+      throw new Error(response.data?.message || "Invalid server response");
+    }
+
+    return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }
@@ -52,8 +77,16 @@ export const getMealLogs = async (date?: string): Promise<MealLog[]> => {
  */
 export const logMeal = async (data: CreateMealLogData): Promise<MealLog> => {
   try {
-    const response = await apiClient.post<MealLog>("/meals/logs", data);
-    return response.data;
+    const response = await apiClient.post<ApiResponse<MealLog>>(
+      "/meals/logs",
+      data
+    );
+
+    if (!response.data?.data) {
+      throw new Error(response.data?.message || "Invalid server response");
+    }
+
+    return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }
@@ -75,10 +108,15 @@ export const deleteMealLog = async (logId: string): Promise<void> => {
  */
 export const getMealSuggestions = async (): Promise<MealSuggestion[]> => {
   try {
-    const response = await apiClient.get<MealSuggestion[]>(
+    const response = await apiClient.get<ApiResponse<MealSuggestion[]>>(
       "/meals/suggestions"
     );
-    return response.data;
+
+    if (!response.data?.data) {
+      throw new Error(response.data?.message || "Invalid server response");
+    }
+
+    return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }

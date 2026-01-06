@@ -17,10 +17,13 @@ import {
 import AppNavigator from "./src/navigation/AppNavigator";
 import { useAuthStore } from "./src/stores/authStore";
 import { useThemeStore } from "./src/stores/themeStore";
+import { useUserStore } from "./src/stores/userStore";
+import * as userApi from "./src/api/user";
 
 export default function App() {
-  const { loadTokens } = useAuthStore();
+  const { loadTokens, isAuthenticated } = useAuthStore();
   const { loadTheme, isDark } = useThemeStore();
+  const { user, setUser, dailySummary, setDailySummary } = useUserStore();
 
   const [fontsLoaded, fontError] = useFonts({
     "RobotoMono-Regular": RobotoMono_400Regular,
@@ -34,6 +37,33 @@ export default function App() {
     loadTokens();
     loadTheme();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrate = async () => {
+      if (!isAuthenticated) return;
+
+      try {
+        if (!user) {
+          const profile = await userApi.getProfile();
+          if (!cancelled) setUser(profile);
+        }
+
+        if (!dailySummary) {
+          const summary = await userApi.getDailySummary();
+          if (!cancelled) setDailySummary(summary);
+        }
+      } catch (e) {
+        // Best-effort hydration; screens can still render with defaults.
+      }
+    };
+
+    hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user, dailySummary, setUser, setDailySummary]);
 
   useEffect(() => {
     if (fontError) {

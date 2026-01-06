@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -17,6 +18,7 @@ import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
 import { SocialButton } from "../components/common/SocialButton";
 import { Ionicons } from "@expo/vector-icons";
+import * as authApi from "../api/auth";
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, "Login">;
 
@@ -31,42 +33,27 @@ const LoginScreen = () => {
   const { setUser } = useUserStore();
 
   const handleLogin = async () => {
-    console.log("Login button pressed", { email, password });
-
     if (!email || !password) {
-      console.log("Validation failed - missing email or password");
+      Alert.alert("Missing info", "Please enter your email and password.");
       return;
     }
 
-    console.log("Starting login process...");
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(async () => {
-      console.log("Creating mock user...");
-      const mockUser = {
-        id: "1",
-        email: email,
-        name: "User",
-        role: "user",
-        profile: {
-          age: 30,
-          gender: "female",
-          height: 165,
-          weight: 60,
-          activityLevel: "moderate",
-          dietaryPreferences: [],
-          healthGoals: [],
-        },
-      };
+    try {
+      const { user, accessToken, refreshToken } = await authApi.login({
+        email,
+        password,
+      });
 
-      console.log("Setting user and tokens...");
-      setUser(mockUser as any);
-      await setTokens("mock-access-token", "mock-refresh-token");
-      setLoading(false);
-      console.log("Login complete!");
+      setUser(user);
+      await setTokens(accessToken, refreshToken);
       // Navigation will happen automatically via AppNavigator when isAuthenticated becomes true
-    }, 1000);
+    } catch (error: any) {
+      Alert.alert("Login failed", error?.message || "Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

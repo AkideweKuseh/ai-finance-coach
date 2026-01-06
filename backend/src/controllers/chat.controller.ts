@@ -18,7 +18,12 @@ import { AIMessage } from "../services/ai/provider.interface";
 export const sendMessage = catchAsync(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
-    const { content, includeProfile } = req.body;
+
+    if (!userId) {
+      throw new AppError("Unauthorized", 401);
+    }
+
+    const { content } = req.body;
 
     // Get or create conversation
     let conversation = await Chat.findOne({ userId });
@@ -39,19 +44,16 @@ export const sendMessage = catchAsync(
 
     conversation.messages.push(userMessage);
 
-    // Get user context if requested
+    // Always include user profile context when available
     let userContext: string | undefined;
-
-    if (includeProfile) {
-      const user = await User.findById(userId);
-      if (user) {
-        userContext = aiService.formatUserContext(user);
-      }
+    const user = await User.findById(userId);
+    if (user) {
+      userContext = aiService.formatUserContext(user);
     }
 
     try {
-      // Convert messages to AI format (last 10 messages for context)
-      const recentMessages = conversation.messages.slice(-10);
+      // Convert messages to AI format (last 105 messages for context)
+      const recentMessages = conversation.messages.slice(-105);
       const aiMessages: AIMessage[] = recentMessages.map((msg: any) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,

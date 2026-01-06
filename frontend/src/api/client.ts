@@ -11,8 +11,19 @@ import axios, {
 } from "axios";
 import { useAuthStore } from "../stores/authStore";
 
+type ApiResponse<T> = {
+  success: boolean;
+  message?: string;
+  data?: T;
+  errors?: unknown;
+};
+
 // Base API URL from environment
-const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:5000/api";
+// NOTE: For Expo, only variables prefixed with EXPO_PUBLIC_ are available at runtime.
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL ||
+  process.env.API_BASE_URL ||
+  "http://localhost:5000/api";
 
 /**
  * Create Axios instance with default config
@@ -65,12 +76,23 @@ apiClient.interceptors.response.use(
         }
 
         // Request new access token
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+        const response = await axios.post<
+          ApiResponse<{
+            accessToken: string;
+            refreshToken: string;
+          }>
+        >(`${API_BASE_URL}/auth/refresh`, {
           refreshToken,
         });
 
+        const tokenPair = response.data?.data;
+
+        if (!tokenPair?.accessToken || !tokenPair?.refreshToken) {
+          throw new Error(response.data?.message || "Invalid refresh response");
+        }
+
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
-          response.data;
+          tokenPair;
 
         // Update tokens in store
         await useAuthStore
@@ -104,12 +126,19 @@ apiClient.interceptors.response.use(
 export const handleApiError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     if (error.response) {
+      const data: any = error.response.data;
+
+      // Backend validation middleware returns { success:false, message:"Validation failed", errors:[...] }
+      if (Array.isArray(data?.errors) && data.errors.length > 0) {
+        const first = data.errors[0];
+        const msg = first?.msg || first?.message;
+        if (typeof msg === "string" && msg.trim().length > 0) {
+          return msg;
+        }
+      }
+
       // Server responded with error
-      return (
-        error.response.data?.message ||
-        error.response.statusText ||
-        "An error occurred"
-      );
+      return data?.message || error.response.statusText || "An error occurred";
     } else if (error.request) {
       // Request made but no response
       return "Network error. Please check your connection.";

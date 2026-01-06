@@ -3,7 +3,7 @@
  * User profile with stats, goals, and preferences
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -23,16 +23,65 @@ import {
   useThemedColors,
 } from "../theme";
 import { ScreenContainer } from "../components/common/ScreenContainer";
+import { useUserStore } from "../stores/userStore";
 
 type Goal = "lose" | "maintain" | "gain";
 
 const ProfileScreen = () => {
   const themedColors = useThemedColors();
+  const { user } = useUserStore();
   const [selectedGoal, setSelectedGoal] = useState<Goal>("maintain");
   const [activityLevel, setActivityLevel] = useState(2);
-  const [dietPreferences, setDietPreferences] = useState<string[]>(["Vegan"]);
+  const [dietPreferences, setDietPreferences] = useState<string[]>([]);
 
-  const activityLabels = ["Sedentary", "Moderate", "Active", "Athlete"];
+  const activityLabels = [
+    "Sedentary",
+    "Light",
+    "Moderate",
+    "Active",
+    "Athlete",
+  ];
+
+  const titleCase = (value: string) =>
+    value
+      .split(/[-\s]+/)
+      .filter(Boolean)
+      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+      .join(" ");
+
+  useEffect(() => {
+    if (!user?.profile) return;
+
+    setSelectedGoal(user.profile.goal);
+
+    const idx = activityLabels
+      .map((l) => l.toLowerCase())
+      .indexOf(user.profile.activityLevel);
+    setActivityLevel(idx >= 0 ? idx : 2);
+
+    const prefs = (user.profile.dietaryPreferences || []).map(titleCase);
+    setDietPreferences(prefs);
+  }, [user]);
+
+  const memberSinceLabel = useMemo(() => {
+    if (!user?.createdAt) return undefined;
+    const d = new Date(user.createdAt);
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    return `Member since ${months[d.getMonth()]} ${d.getFullYear()}`;
+  }, [user?.createdAt]);
 
   const toggleDietPreference = (pref: string) => {
     if (dietPreferences.includes(pref)) {
@@ -91,13 +140,13 @@ const ProfileScreen = () => {
             </TouchableOpacity>
           </View>
           <Text style={[styles.userName, { color: themedColors.textPrimary }]}>
-            Alex Johnson
+            {user?.name || "Your Profile"}
           </Text>
           <View style={styles.memberInfo}>
             <Text
               style={[styles.memberText, { color: themedColors.textSecondary }]}
             >
-              Member since Jan 2024
+              {memberSinceLabel || ""}
             </Text>
             <View
               style={[
@@ -146,7 +195,7 @@ const ProfileScreen = () => {
               <Text
                 style={[styles.statValue, { color: themedColors.textPrimary }]}
               >
-                28
+                {user?.profile?.age ?? "—"}
               </Text>
             </View>
             <View
@@ -164,14 +213,14 @@ const ProfileScreen = () => {
               <Text
                 style={[styles.statValue, { color: themedColors.textPrimary }]}
               >
-                75{" "}
+                {user?.profile?.weight ?? "—"}{" "}
                 <Text
                   style={[
                     styles.statUnit,
                     { color: themedColors.textSecondary },
                   ]}
                 >
-                  kg
+                  {user?.profile?.unitPreference === "imperial" ? "lb" : "kg"}
                 </Text>
               </Text>
             </View>
@@ -196,7 +245,10 @@ const ProfileScreen = () => {
               <Text
                 style={[styles.statValue, { color: themedColors.textPrimary }]}
               >
-                178 <Text style={styles.statUnit}>cm</Text>
+                {user?.profile?.height ?? "—"}{" "}
+                <Text style={styles.statUnit}>
+                  {user?.profile?.unitPreference === "imperial" ? "in" : "cm"}
+                </Text>
               </Text>
             </View>
           </View>

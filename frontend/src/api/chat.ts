@@ -9,6 +9,13 @@ import {
   ChatConversation,
 } from "../types/chat";
 
+type ApiResponse<T> = {
+  success: boolean;
+  message?: string;
+  data?: T;
+  errors?: unknown;
+};
+
 /**
  * Send message to AI consultant
  */
@@ -16,11 +23,16 @@ export const sendMessage = async (
   data: SendMessageData
 ): Promise<SendMessageResponse> => {
   try {
-    const response = await apiClient.post<SendMessageResponse>(
+    const response = await apiClient.post<ApiResponse<SendMessageResponse>>(
       "/chat/message",
       data
     );
-    return response.data;
+
+    if (!response.data?.data) {
+      throw new Error(response.data?.message || "Invalid server response");
+    }
+
+    return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }
@@ -37,8 +49,15 @@ export const getConversation = async (
       ? `/chat/conversation/${conversationId}`
       : "/chat/conversation";
 
-    const response = await apiClient.get<ChatConversation>(endpoint);
-    return response.data;
+    const response = await apiClient.get<ApiResponse<ChatConversation>>(
+      endpoint
+    );
+
+    if (!response.data?.data) {
+      throw new Error(response.data?.message || "Invalid server response");
+    }
+
+    return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }

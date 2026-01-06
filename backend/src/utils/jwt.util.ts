@@ -6,6 +6,7 @@
 
 import jwt from "jsonwebtoken";
 import { config } from "../config/environment";
+import { AppError } from "../middleware/error.middleware";
 
 export interface JWTPayload {
   userId: string;
@@ -38,7 +39,7 @@ export const verifyAccessToken = (token: string): JWTPayload => {
     const decoded = jwt.verify(token, config.jwt.accessSecret) as JWTPayload;
     return decoded;
   } catch (error) {
-    throw new Error("Invalid or expired access token");
+    throw new AppError("Invalid or expired access token", 401);
   }
 };
 
@@ -50,7 +51,7 @@ export const verifyRefreshToken = (token: string): JWTPayload => {
     const decoded = jwt.verify(token, config.jwt.refreshSecret) as JWTPayload;
     return decoded;
   } catch (error) {
-    throw new Error("Invalid or expired refresh token");
+    throw new AppError("Invalid or expired refresh token", 401);
   }
 };
 

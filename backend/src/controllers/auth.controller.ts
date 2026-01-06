@@ -66,8 +66,19 @@ export const register = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("Email already registered", 409);
   }
 
+  // Normalize profile (UI may not collect full profile at signup)
+  const normalizedProfile = {
+    age: profile?.age ?? 30,
+    height: profile?.height ?? 170,
+    weight: profile?.weight ?? 70,
+    goal: profile?.goal ?? "maintain",
+    activityLevel: profile?.activityLevel ?? "moderate",
+    dietaryPreferences: profile?.dietaryPreferences || [],
+    unitPreference: profile?.unitPreference || "metric",
+  };
+
   // Calculate nutrition goals
-  const nutritionGoals = calculateNutritionGoals(profile);
+  const nutritionGoals = calculateNutritionGoals(normalizedProfile);
 
   // Hash password
   const hashedPassword = await hashPassword(password);
@@ -78,10 +89,8 @@ export const register = catchAsync(async (req: Request, res: Response) => {
     password: hashedPassword,
     name,
     profile: {
-      ...profile,
+      ...normalizedProfile,
       ...nutritionGoals,
-      dietaryPreferences: profile.dietaryPreferences || [],
-      unitPreference: profile.unitPreference || "metric",
     },
   });
 
@@ -168,7 +177,12 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
   }
 
   // Verify refresh token
-  const payload = verifyRefreshToken(refreshToken);
+  let payload: JWTPayload;
+  try {
+    payload = verifyRefreshToken(refreshToken);
+  } catch (_error) {
+    throw new AppError("Invalid refresh token", 401);
+  }
 
   // Find user and check if refresh token exists
   const user = await User.findById(payload.userId);

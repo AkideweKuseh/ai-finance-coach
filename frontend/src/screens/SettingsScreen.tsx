@@ -31,7 +31,7 @@ import * as authApi from "../api/auth";
 
 const SettingsScreen = () => {
   const { clearTokens } = useAuthStore();
-  const { clearUser } = useUserStore();
+  const { user, clearUser } = useUserStore();
   const { themeMode, isDark, setThemeMode } = useThemeStore();
   const themedColors = useThemedColors();
   const [useMetric, setUseMetric] = useState(true);
@@ -111,7 +111,7 @@ const SettingsScreen = () => {
                     { color: themedColors.textPrimary },
                   ]}
                 >
-                  Alex Green
+                  {user?.name || ""}
                 </Text>
                 <View style={styles.proBadge}>
                   <Text style={styles.proText}>PRO</Text>
@@ -124,7 +124,7 @@ const SettingsScreen = () => {
                   { color: themedColors.textSecondary },
                 ]}
               >
-                alex.green@example.com
+                {user?.email || ""}
               </Text>
             </View>
             <TouchableOpacity style={styles.editButton}>

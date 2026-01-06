@@ -239,7 +239,7 @@ OPENAI_MODEL=gpt-4-turbo-preview
 
 # Gemini Configuration
 GEMINI_API_KEY=your-gemini-api-key-here
-GEMINI_MODEL=gemini-pro
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
 **Frontend** (`frontend/.env`):
