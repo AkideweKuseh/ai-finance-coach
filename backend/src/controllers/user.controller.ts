@@ -1,12 +1,12 @@
 /**
  * User Controller
  *
- * Handles user profile and daily summary operations
+ * Handles user profile and spending summary operations
  */
 
 import { Response } from "express";
 import { User } from "../models/User.model";
-import { MealLog } from "../models/Meal.model";
+import { Transaction } from "../models/Transaction.model"; // Changed MealLog to Transaction
 import { AuthRequest } from "../middleware/auth.middleware";
 import { AppError, catchAsync } from "../middleware/error.middleware";
 
@@ -51,27 +51,10 @@ export const updateProfile = catchAsync(
 
     // Update profile fields if provided
     if (profile) {
-      // Recalculate nutrition goals if relevant fields changed
-      const shouldRecalculate =
-        profile.age !== undefined ||
-        profile.height !== undefined ||
-        profile.weight !== undefined ||
-        profile.goal !== undefined ||
-        profile.activityLevel !== undefined;
-
-      if (shouldRecalculate) {
-        const updatedProfile = {
-          ...(user.profile as any).toObject(),
-          ...profile,
-        };
-        const nutritionGoals = calculateNutritionGoals(updatedProfile);
-        user.profile = { ...updatedProfile, ...nutritionGoals } as any;
-      } else {
-        user.profile = {
-          ...(user.profile as any).toObject(),
-          ...profile,
-        } as any;
-      }
+      user.profile = {
+        ...(user.profile as any).toObject(),
+        ...profile,
+      } as any;
     }
 
     await user.save();
@@ -85,9 +68,9 @@ export const updateProfile = catchAsync(
 );
 
 /**
- * Get daily summary (calories and macros)
+ * Get spending summary
  */
-export const getDailySummary = catchAsync(
+export const getSpendingSummary = catchAsync(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     const dateParam = req.query.date as string;
@@ -103,49 +86,42 @@ export const getDailySummary = catchAsync(
     const startOfDay = new Date(date.setHours(0, 0, 0, 0));
     const endOfDay = new Date(date.setHours(23, 59, 59, 999));
 
-    // Get all meal logs for the day
-    const mealLogs = await MealLog.find({
+    // Get all transactions for the day
+    const transactions = await Transaction.find({
       userId,
       date: { $gte: startOfDay, $lte: endOfDay },
-    }).populate("mealId");
-
-    // Calculate totals
-    let totalCalories = 0;
-    let totalProtein = 0;
-    let totalCarbs = 0;
-    let totalFat = 0;
-
-    mealLogs.forEach((log: any) => {
-      const meal = log.mealId as any;
-      const servings = log.servings;
-
-      totalCalories += meal.calories * servings;
-      totalProtein += meal.macros.protein * servings;
-      totalCarbs += meal.macros.carbs * servings;
-      totalFat += meal.macros.fat * servings;
     });
 
-    // Calculate remaining
-    const { dailyCalorieGoal, macroGoals } = user.profile;
+    // Calculate totals
+    const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
+    const emotionalSpendingCount = transactions.filter(
+      (t) => t.mood && t.mood !== "neutral"
+    ).length;
+    
+    // Find top trigger (simple frequency count)
+    const triggerCounts: Record<string, number> = {};
+    transactions.forEach(t => {
+        if (t.trigger) {
+            triggerCounts[t.trigger] = (triggerCounts[t.trigger] || 0) + 1;
+        }
+    });
+    
+    let topTrigger: string | undefined = undefined;
+    if (Object.keys(triggerCounts).length > 0) {
+        topTrigger = Object.keys(triggerCounts).reduce((a, b) => triggerCounts[a] > triggerCounts[b] ? a : b);
+    }
+    
+    // Simple budget calculation (e.g. monthly income / 30 or default $100)
+    // In production this should be a user setting or environment variable
+    const dailyBudget = user.profile.monthlyIncome ? (user.profile.monthlyIncome / 30) : 100;
 
     const summary = {
       date: startOfDay.toISOString(),
-      caloriesConsumed: Math.round(totalCalories),
-      macrosConsumed: {
-        protein: Math.round(totalProtein),
-        carbs: Math.round(totalCarbs),
-        fat: Math.round(totalFat),
-      },
-      caloriesRemaining: Math.max(
-        0,
-        dailyCalorieGoal - Math.round(totalCalories)
-      ),
-      macrosRemaining: {
-        protein: Math.max(0, macroGoals.protein - Math.round(totalProtein)),
-        carbs: Math.max(0, macroGoals.carbs - Math.round(totalCarbs)),
-        fat: Math.max(0, macroGoals.fat - Math.round(totalFat)),
-      },
-      mealsLogged: mealLogs.length,
+      totalSpent,
+      budgetLimit: Math.round(dailyBudget),
+      emotionalSpendingCount,
+      topTrigger,
+      savingsProgress: 0, // Placeholder for actual savings logic
     };
 
     res.status(200).json({
@@ -163,7 +139,7 @@ export const deleteAccount = catchAsync(
     const userId = req.user?.userId;
 
     await User.findByIdAndDelete(userId);
-    await MealLog.deleteMany({ userId });
+    await Transaction.deleteMany({ userId }); // Changed MealLog to Transaction
 
     res.status(200).json({
       success: true,
@@ -172,35 +148,9 @@ export const deleteAccount = catchAsync(
   }
 );
 
-// Helper function (duplicated from auth controller for independence)
-const calculateNutritionGoals = (profile: any) => {
-  const { age, height, weight, goal, activityLevel } = profile;
-  const bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-  const activityMultipliers: Record<string, number> = {
-    sedentary: 1.2,
-    light: 1.375,
-    moderate: 1.55,
-    active: 1.725,
-    athlete: 1.9,
-  };
-  const tdee = bmr * (activityMultipliers[activityLevel] || 1.55);
-  let dailyCalories = tdee;
-  if (goal === "lose") dailyCalories = tdee - 500;
-  else if (goal === "gain") dailyCalories = tdee + 300;
-
-  const protein = Math.round((dailyCalories * 0.3) / 4);
-  const carbs = Math.round((dailyCalories * 0.4) / 4);
-  const fat = Math.round((dailyCalories * 0.3) / 9);
-
-  return {
-    dailyCalorieGoal: Math.round(dailyCalories),
-    macroGoals: { protein, carbs, fat },
-  };
-};
-
 export default {
   getProfile,
   updateProfile,
-  getDailySummary,
+  getSpendingSummary,
   deleteAccount,
 };

@@ -1,6 +1,6 @@
 /**
  * Profile Screen
- * User profile with stats, goals, and preferences
+ * User financial profile with details, goals, and risk tolerance
  */
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -13,7 +13,6 @@ import {
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Slider from "@react-native-community/slider";
 import {
   colors,
   spacing,
@@ -25,71 +24,51 @@ import {
 import { ScreenContainer } from "../components/common/ScreenContainer";
 import { useUserStore } from "../stores/userStore";
 
-type Goal = "lose" | "maintain" | "gain";
+type FinancialGoal = "save_emergency" | "pay_debt" | "invest" | "budget_control";
+type RiskTolerance = "conservative" | "moderate" | "aggressive";
 
 const ProfileScreen = () => {
   const themedColors = useThemedColors();
-  const { user } = useUserStore();
-  const [selectedGoal, setSelectedGoal] = useState<Goal>("maintain");
-  const [activityLevel, setActivityLevel] = useState(2);
-  const [dietPreferences, setDietPreferences] = useState<string[]>([]);
+  const { user, updateProfile } = useUserStore();
+  const [selectedGoal, setSelectedGoal] = useState<FinancialGoal>("save_emergency");
+  const [riskTolerance, setRiskTolerance] = useState<RiskTolerance>("moderate");
+  const [spendingCategories, setSpendingCategories] = useState<string[]>([]);
 
-  const activityLabels = [
-    "Sedentary",
-    "Light",
-    "Moderate",
-    "Active",
-    "Athlete",
-  ];
-
-  const titleCase = (value: string) =>
-    value
-      .split(/[-\s]+/)
-      .filter(Boolean)
-      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-      .join(" ");
-
+  // Update local state when user loads
   useEffect(() => {
     if (!user?.profile) return;
-
-    setSelectedGoal(user.profile.goal);
-
-    const idx = activityLabels
-      .map((l) => l.toLowerCase())
-      .indexOf(user.profile.activityLevel);
-    setActivityLevel(idx >= 0 ? idx : 2);
-
-    const prefs = (user.profile.dietaryPreferences || []).map(titleCase);
-    setDietPreferences(prefs);
+    if (user.profile.primaryGoal) setSelectedGoal(user.profile.primaryGoal);
+    if (user.profile.riskTolerance) setRiskTolerance(user.profile.riskTolerance);
+    if (user.profile.spendingCategories) setSpendingCategories(user.profile.spendingCategories);
   }, [user]);
+
+  // Handle updates
+  const handleGoalChange = (goal: FinancialGoal) => {
+      setSelectedGoal(goal);
+      updateProfile({ primaryGoal: goal });
+  };
+
+  const handleRiskChange = (risk: RiskTolerance) => {
+      setRiskTolerance(risk);
+      updateProfile({ riskTolerance: risk });
+  };
+  
+  const toggleCategory = (cat: string) => {
+      let newCats;
+      if (spendingCategories.includes(cat)) {
+          newCats = spendingCategories.filter(c => c !== cat);
+      } else {
+          newCats = [...spendingCategories, cat];
+      }
+      setSpendingCategories(newCats);
+      updateProfile({ spendingCategories: newCats });
+  };
 
   const memberSinceLabel = useMemo(() => {
     if (!user?.createdAt) return undefined;
     const d = new Date(user.createdAt);
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    return `Member since ${months[d.getMonth()]} ${d.getFullYear()}`;
+    return `Member since ${d.toLocaleDateString()}`;
   }, [user?.createdAt]);
-
-  const toggleDietPreference = (pref: string) => {
-    if (dietPreferences.includes(pref)) {
-      setDietPreferences(dietPreferences.filter((p) => p !== pref));
-    } else {
-      setDietPreferences([...dietPreferences, pref]);
-    }
-  };
 
   return (
     <ScreenContainer backgroundColor={themedColors.background}>
@@ -125,39 +104,26 @@ const ProfileScreen = () => {
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
             <Image
-              source={{ uri: "https://via.placeholder.com/112" }}
+              source={{ uri: "https://ui-avatars.com/api/?name=" + (user?.name || "User") + "&background=2D9CDB&color=fff" }}
               style={styles.avatar}
             />
             <TouchableOpacity
               style={styles.editBadge}
-              onPress={() => {
-                // TODO: Navigate to profile update screen
-                console.log("Navigate to profile update screen");
-              }}
+              onPress={() => console.log("Edit avatar")}
               activeOpacity={0.7}
             >
               <Ionicons name="pencil" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
           <Text style={[styles.userName, { color: themedColors.textPrimary }]}>
-            {user?.name || "Your Profile"}
+            {user?.name || "Financial User"}
           </Text>
           <View style={styles.memberInfo}>
             <Text
               style={[styles.memberText, { color: themedColors.textSecondary }]}
             >
-              {memberSinceLabel || ""}
+              {memberSinceLabel || "Just joined"}
             </Text>
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: themedColors.textSecondary },
-              ]}
-            />
-            <View style={styles.levelBadge}>
-              <Ionicons name="leaf" size={16} color={colors.primary} />
-              <Text style={styles.levelText}>Level 3 Dieter</Text>
-            </View>
           </View>
         </View>
 
@@ -167,11 +133,8 @@ const ProfileScreen = () => {
             <Text
               style={[styles.sectionTitle, { color: themedColors.textPrimary }]}
             >
-              The Basics
+              Financial Stats
             </Text>
-            <TouchableOpacity>
-              <Text style={styles.editButton}>Edit Stats</Text>
-            </TouchableOpacity>
           </View>
           <View style={styles.statsGrid}>
             <View
@@ -184,301 +147,153 @@ const ProfileScreen = () => {
               ]}
             >
               <Text style={styles.statEmoji}>🎂</Text>
-              <Text
-                style={[
-                  styles.statLabel,
-                  { color: themedColors.textSecondary },
-                ]}
-              >
-                AGE
-              </Text>
-              <Text
-                style={[styles.statValue, { color: themedColors.textPrimary }]}
-              >
+              <Text style={[styles.statLabel, { color: themedColors.textSecondary }]}>AGE</Text>
+              <Text style={[styles.statValue, { color: themedColors.textPrimary }]}>
                 {user?.profile?.age ?? "—"}
               </Text>
             </View>
             <View
               style={[
                 styles.statCard,
-                styles.statCardHighlight,
                 {
                   backgroundColor: themedColors.surface,
                   borderColor: themedColors.border,
                 },
               ]}
             >
-              <Text style={styles.statEmoji}>⚖️</Text>
-              <Text style={styles.statLabel}>WEIGHT</Text>
-              <Text
-                style={[styles.statValue, { color: themedColors.textPrimary }]}
-              >
-                {user?.profile?.weight ?? "—"}{" "}
-                <Text
-                  style={[
-                    styles.statUnit,
-                    { color: themedColors.textSecondary },
-                  ]}
-                >
-                  {user?.profile?.unitPreference === "imperial" ? "lb" : "kg"}
-                </Text>
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.statCard,
-                {
-                  backgroundColor: themedColors.surface,
-                  borderColor: themedColors.border,
-                },
-              ]}
-            >
-              <Text style={styles.statEmoji}>📏</Text>
-              <Text
-                style={[
-                  styles.statLabel,
-                  { color: themedColors.textSecondary },
-                ]}
-              >
-                HEIGHT
-              </Text>
-              <Text
-                style={[styles.statValue, { color: themedColors.textPrimary }]}
-              >
-                {user?.profile?.height ?? "—"}{" "}
-                <Text style={styles.statUnit}>
-                  {user?.profile?.unitPreference === "imperial" ? "in" : "cm"}
-                </Text>
+              <Text style={styles.statEmoji}>💰</Text>
+              <Text style={[styles.statLabel, { color: themedColors.textSecondary }]}>INCOME</Text>
+              <Text style={[styles.statValue, { color: themedColors.textPrimary }]}>
+                ${user?.profile?.monthlyIncome?.toLocaleString() ?? "—"}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Main Goal */}
+        {/* Primary Goal */}
         <View style={styles.section}>
-          <Text
-            style={[styles.sectionTitle, { color: themedColors.textPrimary }]}
-          >
-            Main Goal
+          <Text style={[styles.sectionTitle, { color: themedColors.textPrimary }]}>
+            Primary Goal
           </Text>
-          <View
-            style={[
-              styles.goalsContainer,
-              { backgroundColor: themedColors.surface },
-            ]}
-          >
-            <TouchableOpacity
-              style={[
-                styles.goalOption,
-                {
-                  backgroundColor: themedColors.surface,
-                  borderColor: themedColors.border,
-                },
-                selectedGoal === "lose" && styles.goalOptionSelected,
-              ]}
-              onPress={() => setSelectedGoal("lose")}
-            >
-              <View style={[styles.goalIcon, styles.goalIconBlue]}>
-                <Ionicons name="trending-down" size={24} color="#3B82F6" />
-              </View>
-              <View style={styles.goalContent}>
-                <View style={styles.goalTitleRow}>
-                  <Text
-                    style={[
-                      styles.goalTitle,
-                      { color: themedColors.textPrimary },
-                    ]}
-                  >
-                    Lose Fat
-                  </Text>
-                  <Text style={styles.goalEmoji}>📉</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.goalDescription,
-                    { color: themedColors.textSecondary },
-                  ]}
-                >
-                  Burn calories & shed weight
-                </Text>
-              </View>
-              <View
+          <View style={[styles.goalsContainer, { backgroundColor: themedColors.surface }]}>
+              {/* Emergency Fund */}
+              <TouchableOpacity
                 style={[
-                  styles.radioOuter,
-                  selectedGoal === "lose" && styles.radioOuterSelected,
+                    styles.goalOption,
+                    { backgroundColor: themedColors.surface, borderColor: themedColors.border },
+                    selectedGoal === 'save_emergency' && styles.goalOptionSelected
                 ]}
+                onPress={() => handleGoalChange('save_emergency')}
               >
-                {selectedGoal === "lose" && (
-                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                )}
-              </View>
-            </TouchableOpacity>
+                  <View style={[styles.goalIcon, { backgroundColor: `${colors.primary}33` }]}>
+                      <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
+                  </View>
+                  <View style={styles.goalContent}>
+                      <Text style={[styles.goalTitle, { color: themedColors.textPrimary }]}>Emergency Fund</Text>
+                      <Text style={[styles.goalDescription, { color: themedColors.textSecondary }]}>Build 3-6 months safety net</Text>
+                  </View>
+                  {selectedGoal === 'save_emergency' && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.goalOption,
-                {
-                  backgroundColor: themedColors.surface,
-                  borderColor: themedColors.border,
-                },
-                selectedGoal === "maintain" && styles.goalOptionSelected,
-              ]}
-              onPress={() => setSelectedGoal("maintain")}
-            >
-              <View style={[styles.goalIcon, styles.goalIconGreen]}>
-                <Ionicons
-                  name="scale-outline"
-                  size={24}
-                  color={colors.primary}
-                />
-              </View>
-              <View style={styles.goalContent}>
-                <View style={styles.goalTitleRow}>
-                  <Text
-                    style={[
-                      styles.goalTitle,
-                      { color: themedColors.textPrimary },
-                    ]}
-                  >
-                    Maintain
-                  </Text>
-                  <Text style={styles.goalEmoji}>🛡️</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.goalDescription,
-                    { color: themedColors.textSecondary },
-                  ]}
-                >
-                  Stay healthy & fit
-                </Text>
-              </View>
-              <View
+              {/* Pay Debt */}
+              <TouchableOpacity
                 style={[
-                  styles.radioOuter,
-                  selectedGoal === "maintain" && styles.radioOuterSelected,
+                    styles.goalOption,
+                    { backgroundColor: themedColors.surface, borderColor: themedColors.border },
+                    selectedGoal === 'pay_debt' && styles.goalOptionSelected
                 ]}
+                onPress={() => handleGoalChange('pay_debt')}
               >
-                {selectedGoal === "maintain" && (
-                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                )}
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.goalOption,
-                {
-                  backgroundColor: themedColors.surface,
-                  borderColor: themedColors.border,
-                },
-                selectedGoal === "gain" && styles.goalOptionSelected,
-              ]}
-              onPress={() => setSelectedGoal("gain")}
-            >
-              <View style={[styles.goalIcon, styles.goalIconOrange]}>
-                <Ionicons name="barbell" size={24} color="#FB923C" />
-              </View>
-              <View style={styles.goalContent}>
-                <View style={styles.goalTitleRow}>
-                  <Text
-                    style={[
-                      styles.goalTitle,
-                      { color: themedColors.textPrimary },
-                    ]}
-                  >
-                    Build Muscle
-                  </Text>
-                  <Text style={styles.goalEmoji}>💪</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.goalDescription,
-                    { color: themedColors.textSecondary },
-                  ]}
-                >
-                  Increase strength & mass
-                </Text>
-              </View>
-              <View
+                  <View style={[styles.goalIcon, { backgroundColor: `${colors.error}33` }]}>
+                      <Ionicons name="trending-down" size={24} color={colors.error} />
+                  </View>
+                  <View style={styles.goalContent}>
+                      <Text style={[styles.goalTitle, { color: themedColors.textPrimary }]}>Pay Off Debt</Text>
+                      <Text style={[styles.goalDescription, { color: themedColors.textSecondary }]}>Focus on high-interest loans</Text>
+                  </View>
+                   {selectedGoal === 'pay_debt' && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}
+              </TouchableOpacity>
+              
+              {/* Invest */}
+              <TouchableOpacity
                 style={[
-                  styles.radioOuter,
-                  selectedGoal === "gain" && styles.radioOuterSelected,
+                    styles.goalOption,
+                    { backgroundColor: themedColors.surface, borderColor: themedColors.border },
+                    selectedGoal === 'invest' && styles.goalOptionSelected
                 ]}
+                onPress={() => handleGoalChange('invest')}
               >
-                {selectedGoal === "gain" && (
-                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                )}
-              </View>
-            </TouchableOpacity>
+                  <View style={[styles.goalIcon, { backgroundColor: `${colors.success}33` }]}>
+                      <Ionicons name="trending-up" size={24} color={colors.success} />
+                  </View>
+                  <View style={styles.goalContent}>
+                      <Text style={[styles.goalTitle, { color: themedColors.textPrimary }]}>Invest Wealth</Text>
+                      <Text style={[styles.goalDescription, { color: themedColors.textSecondary }]}>Grow net worth over time</Text>
+                  </View>
+                   {selectedGoal === 'invest' && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}
+              </TouchableOpacity>
+              
+               {/* Budget Control */}
+              <TouchableOpacity
+                style={[
+                    styles.goalOption,
+                    { backgroundColor: themedColors.surface, borderColor: themedColors.border },
+                    selectedGoal === 'budget_control' && styles.goalOptionSelected
+                ]}
+                onPress={() => handleGoalChange('budget_control')}
+              >
+                  <View style={[styles.goalIcon, { backgroundColor: `${colors.accent}33` }]}>
+                      <Ionicons name="wallet" size={24} color={colors.accent} />
+                  </View>
+                  <View style={styles.goalContent}>
+                      <Text style={[styles.goalTitle, { color: themedColors.textPrimary }]}>Budget Control</Text>
+                      <Text style={[styles.goalDescription, { color: themedColors.textSecondary }]}>Stop living paycheck to paycheck</Text>
+                  </View>
+                   {selectedGoal === 'budget_control' && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}
+              </TouchableOpacity>
           </View>
         </View>
 
-        {/* Activity Level */}
+        {/* Risk Tolerance */}
         <View style={styles.section}>
-          <View style={styles.activityHeader}>
-            <Text
-              style={[styles.sectionTitle, { color: themedColors.textPrimary }]}
-            >
-              Activity Level
-            </Text>
-            <View style={styles.activityBadge}>
-              <Text style={styles.activityBadgeText}>
-                {activityLabels[activityLevel]} 🚶
-              </Text>
-            </View>
-          </View>
-          <View
-            style={[
-              styles.sliderCard,
-              { backgroundColor: themedColors.surface },
-            ]}
-          >
-            <Slider
-              style={styles.slider}
-              minimumValue={0}
-              maximumValue={3}
-              step={1}
-              value={activityLevel}
-              onValueChange={setActivityLevel}
-              minimumTrackTintColor={colors.primary}
-              maximumTrackTintColor={colors.surfaceDarkLight}
-              thumbTintColor={colors.primary}
-            />
-            <View style={styles.sliderLabels}>
-              {activityLabels.map((label, index) => (
-                <Text
-                  key={label}
-                  style={[
-                    styles.sliderLabel,
-                    index === activityLevel && styles.sliderLabelActive,
-                  ]}
-                >
-                  {label}
-                </Text>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Dietary Preferences */}
-        <View style={styles.section}>
-          <Text
-            style={[styles.sectionTitle, { color: themedColors.textPrimary }]}
-          >
-            Dietary Preferences
+          <Text style={[styles.sectionTitle, { color: themedColors.textPrimary }]}>
+            Risk Tolerance
           </Text>
-          <View
-            style={[
-              styles.preferencesContainer,
-              { backgroundColor: themedColors.surface },
-            ]}
-          >
+           <View style={{ flexDirection: 'row', gap: 12 }}>
+               {['conservative', 'moderate', 'aggressive'].map((level) => (
+                   <TouchableOpacity 
+                    key={level}
+                    style={[
+                        styles.riskCard, 
+                        { backgroundColor: themedColors.surface, borderColor: themedColors.border },
+                        riskTolerance === level && { borderColor: colors.primary, borderWidth: 2 }
+                    ]}
+                    onPress={() => handleRiskChange(level as RiskTolerance)}
+                   >
+                       <Text style={{ fontSize: 24, marginBottom: 8 }}>
+                           {level === 'conservative' ? '🛡️' : level === 'moderate' ? '⚖️' : '🚀'}
+                       </Text>
+                       <Text style={[styles.riskLabel, { color: themedColors.textPrimary }]}>
+                           {level.charAt(0).toUpperCase() + level.slice(1)}
+                       </Text>
+                   </TouchableOpacity>
+               ))}
+           </View>
+        </View>
+
+        {/* Categories */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: themedColors.textPrimary }]}>
+            Spending Categories
+          </Text>
+          <View style={[styles.preferencesContainer, { backgroundColor: themedColors.surface }]}>
             {[
-              { emoji: "🥦", label: "Vegan" },
-              { emoji: "🥩", label: "Paleo" },
-              { emoji: "🥑", label: "Keto" },
-              { emoji: "🍞", label: "Gluten Free" },
+              { emoji: "🍔", label: "Food" },
+              { emoji: "🚌", label: "Transport" },
+              { emoji: "💊", label: "Health" },
+              { emoji: "🛍️", label: "Shopping" },
+              { emoji: "💡", label: "Bills" },
+              { emoji: "🎮", label: "Fun" },
             ].map((pref) => (
               <TouchableOpacity
                 key={pref.label}
@@ -488,39 +303,22 @@ const ProfileScreen = () => {
                     backgroundColor: themedColors.surfaceLight,
                     borderColor: themedColors.border,
                   },
-                  dietPreferences.includes(pref.label) &&
-                    styles.preferenceChipActive,
+                  spendingCategories.includes(pref.label) && styles.preferenceChipActive,
                 ]}
-                onPress={() => toggleDietPreference(pref.label)}
+                onPress={() => toggleCategory(pref.label)}
               >
                 <Text style={styles.preferenceEmoji}>{pref.emoji}</Text>
                 <Text
                   style={[
                     styles.preferenceLabel,
                     { color: themedColors.textPrimary },
-                    dietPreferences.includes(pref.label) &&
-                      styles.preferenceLabelActive,
+                    spendingCategories.includes(pref.label) && styles.preferenceLabelActive,
                   ]}
                 >
                   {pref.label}
                 </Text>
-                {dietPreferences.includes(pref.label) && (
-                  <Ionicons name="close" size={16} color="#FFFFFF" />
-                )}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity
-              style={[
-                styles.addButton,
-                { backgroundColor: themedColors.surfaceLight },
-              ]}
-            >
-              <Ionicons
-                name="add"
-                size={24}
-                color={themedColors.textSecondary}
-              />
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -537,32 +335,16 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+    paddingVertical: spacing.md,
     backgroundColor: colors.backgroundDark,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255, 255, 255, 0.05)",
   },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 20,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.textPrimaryDark,
-    fontFamily: typography.fontFamily.display,
-  },
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: colors.textPrimaryDark,
     fontFamily: typography.fontFamily.display,
   },
   scrollView: {
@@ -577,7 +359,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing["2xl"],
   },
   avatarContainer: {
-    position: "relative",
     marginBottom: spacing.md,
   },
   avatar: {
@@ -596,69 +377,37 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: colors.primary,
-    borderWidth: 4,
-    borderColor: colors.backgroundDark,
     alignItems: "center",
     justifyContent: "center",
-    ...shadows.lg,
+    borderWidth: 4,
+    borderColor: colors.backgroundDark,
   },
   userName: {
     fontSize: 24,
     fontWeight: "700",
-    color: colors.textPrimaryDark,
     marginBottom: 4,
     fontFamily: typography.fontFamily.display,
   },
   memberInfo: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
   },
   memberText: {
     fontSize: 14,
-    color: colors.textSecondaryDark,
-    fontFamily: typography.fontFamily.body,
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.textSecondaryDark,
-  },
-  levelBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  levelText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.primary,
     fontFamily: typography.fontFamily.body,
   },
   section: {
     marginBottom: spacing["2xl"],
   },
   sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: spacing.sm,
-    paddingHorizontal: 4,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: colors.textPrimaryDark,
     marginBottom: spacing.sm,
     paddingLeft: 4,
     fontFamily: typography.fontFamily.display,
-  },
-  editButton: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.primary,
-    fontFamily: typography.fontFamily.body,
   },
   statsGrid: {
     flexDirection: "row",
@@ -667,222 +416,104 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
     padding: spacing.md,
     borderRadius: radius["2xl"],
-    backgroundColor: colors.surfaceDark,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.05)",
     ...shadows.sm,
-  },
-  statCardHighlight: {
-    position: "relative",
   },
   statEmoji: {
     fontSize: 24,
     marginBottom: 4,
-    fontFamily: typography.fontFamily.body,
   },
   statLabel: {
     fontSize: 10,
     fontWeight: "500",
-    color: colors.textSecondaryDark,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
     fontFamily: typography.fontFamily.body,
   },
   statValue: {
     fontSize: 20,
     fontWeight: "700",
-    color: colors.textPrimaryDark,
     marginTop: 4,
     fontFamily: typography.fontFamily.display,
   },
-  statUnit: {
-    fontSize: 14,
-    fontWeight: "400",
-    color: colors.textSecondaryDark,
-    fontFamily: typography.fontFamily.body,
-  },
   goalsContainer: {
     gap: 12,
+    padding: spacing.sm,
+    borderRadius: radius.xl,
   },
   goalOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: spacing.md,
-    borderRadius: radius["2xl"],
-    backgroundColor: colors.surfaceDark,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.05)",
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: spacing.md,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      gap: spacing.md,
   },
   goalOptionSelected: {
-    borderWidth: 2,
-    borderColor: colors.primary,
-    ...shadows.md,
+      borderColor: colors.primary,
+      backgroundColor: `${colors.primary}1A`, // slightly highlighted
   },
   goalIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.md,
-  },
-  goalIconBlue: {
-    backgroundColor: "rgba(59, 130, 246, 0.2)",
-  },
-  goalIconGreen: {
-    backgroundColor: `${colors.primary}33`,
-  },
-  goalIconOrange: {
-    backgroundColor: "rgba(251, 146, 60, 0.2)",
+      width: 40,
+      height: 40,
+      borderRadius: radius.full,
+      alignItems: 'center',
+      justifyContent: 'center',
   },
   goalContent: {
-    flex: 1,
-  },
-  goalTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+      flex: 1,
   },
   goalTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.textPrimaryDark,
-    fontFamily: typography.fontFamily.display,
-  },
-  goalEmoji: {
-    fontSize: 18,
-    fontFamily: typography.fontFamily.body,
+      fontSize: 16,
+      fontWeight: '700',
+      fontFamily: typography.fontFamily.display,
   },
   goalDescription: {
-    fontSize: 14,
-    color: colors.textSecondaryDark,
-    marginTop: 2,
-    fontFamily: typography.fontFamily.body,
+      fontSize: 12,
+      fontFamily: typography.fontFamily.body,
   },
-  radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.textSecondaryDark,
-    alignItems: "center",
-    justifyContent: "center",
+  riskCard: {
+      flex: 1,
+      alignItems: 'center',
+      padding: spacing.md,
+      borderRadius: radius.xl,
+      borderWidth: 1,
   },
-  radioOuterSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  activityHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.md,
-    paddingHorizontal: 4,
-  },
-  activityBadge: {
-    backgroundColor: `${colors.primary}1A`,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-  },
-  activityBadgeText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.primary,
-    fontFamily: typography.fontFamily.body,
-  },
-  sliderCard: {
-    padding: spacing.md,
-    paddingVertical: spacing.screenPadding,
-    borderRadius: radius["2xl"],
-    backgroundColor: colors.surfaceDark,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.05)",
-  },
-  slider: {
-    width: "100%",
-    height: 40,
-  },
-  sliderLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: spacing.md,
-    paddingHorizontal: 8,
-  },
-  sliderLabel: {
-    width: 64,
-    fontSize: 12,
-    fontWeight: "500",
-    color: colors.textSecondaryDark,
-    textAlign: "center",
-    fontFamily: typography.fontFamily.body,
-  },
-  sliderLabelActive: {
-    color: colors.textPrimaryDark,
+  riskLabel: {
+      fontWeight: '700',
+      fontSize: 14,
   },
   preferencesContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+    padding: spacing.md,
+    borderRadius: radius["2xl"],
   },
   preferenceChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: radius.full,
-    backgroundColor: colors.surfaceDark,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    gap: 6,
   },
   preferenceChipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
-    ...shadows.sm,
   },
   preferenceEmoji: {
-    fontSize: 18,
-    fontFamily: typography.fontFamily.body,
+    fontSize: 16,
   },
   preferenceLabel: {
     fontSize: 14,
     fontWeight: "500",
-    color: colors.textPrimaryDark,
     fontFamily: typography.fontFamily.body,
   },
   preferenceLabelActive: {
     color: "#FFFFFF",
-  },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: colors.textSecondaryDark,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  updateButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: colors.primary,
-    marginTop: spacing.xl,
-    ...shadows.lg,
-  },
-  updateButtonText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    fontFamily: typography.fontFamily.display,
   },
 });
 

@@ -1,6 +1,6 @@
 /**
  * AI Chat Screen
- * Chat interface with AI nutrition assistant
+ * Chat interface with AI financial coach
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -11,13 +11,11 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Image,
   Platform,
   Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import Markdown from "react-native-markdown-display";
@@ -26,7 +24,6 @@ import {
   spacing,
   typography,
   radius,
-  shadows,
   useThemedColors,
 } from "../theme";
 import { ScreenContainer } from "../components/common/ScreenContainer";
@@ -38,44 +35,11 @@ interface Message {
   text: string;
   isAI: boolean;
   timestamp: string;
-  mealCard?: MealCardData;
 }
-
-interface MealCardData {
-  title: string;
-  calories: number;
-  prepTime: string;
-  protein: number;
-  carbs: number;
-  fat: number;
-  imageUrl: string;
-  tip?: string;
-}
-
-const toPlainText = (value: string) => {
-  // Best-effort conversion so copying doesn't include markdown tokens.
-  // (Display uses a markdown renderer; this is just for clipboard.)
-  return (value || "")
-    .replace(/```[\s\S]*?```/g, (block) =>
-      block.replace(/```[a-zA-Z0-9_-]*\n?|```/g, "").trim()
-    )
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/__([^_]+)__/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/_([^_]+)_/g, "$1")
-    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
-    .replace(/^\s*>\s?/gm, "")
-    .replace(/^\s*[-*+]\s+/gm, "• ")
-    .replace(/^\s*\d+\.\s+/gm, "")
-    .replace(/\r\n/g, "\n")
-    .trim();
-};
 
 const copyMessageText = async (value: string) => {
   try {
-    await Clipboard.setStringAsync(toPlainText(value));
+    await Clipboard.setStringAsync(value);
   } catch {
     // best-effort
   }
@@ -88,55 +52,9 @@ const AIMessage = ({ message }: { message: Message }) => {
       body: {
         color: themedColors.textPrimary,
         fontFamily: typography.fontFamily.body,
-        fontSize: styles.aiText.fontSize,
-        lineHeight: styles.aiText.lineHeight,
+        fontSize: 16,
       },
-      paragraph: { marginTop: 0, marginBottom: 0 },
-      text: {
-        color: themedColors.textPrimary,
-        fontFamily: typography.fontFamily.body,
-        fontSize: styles.aiText.fontSize,
-        lineHeight: styles.aiText.lineHeight,
-      },
-      heading1: {
-        fontSize: styles.aiText.fontSize,
-        lineHeight: styles.aiText.lineHeight,
-      },
-      heading2: {
-        fontSize: styles.aiText.fontSize,
-        lineHeight: styles.aiText.lineHeight,
-      },
-      heading3: {
-        fontSize: styles.aiText.fontSize,
-        lineHeight: styles.aiText.lineHeight,
-      },
-      heading4: {
-        fontSize: styles.aiText.fontSize,
-        lineHeight: styles.aiText.lineHeight,
-      },
-      heading5: {
-        fontSize: styles.aiText.fontSize,
-        lineHeight: styles.aiText.lineHeight,
-      },
-      heading6: {
-        fontSize: styles.aiText.fontSize,
-        lineHeight: styles.aiText.lineHeight,
-      },
-      strong: { fontFamily: typography.fontFamily.display },
-      em: { fontStyle: "italic" as const },
       link: { color: colors.primary },
-      code_inline: {
-        fontFamily: typography.fontFamily.body,
-        backgroundColor: themedColors.background,
-      },
-      code_block: {
-        fontFamily: typography.fontFamily.body,
-        backgroundColor: themedColors.background,
-      },
-      fence: {
-        fontFamily: typography.fontFamily.body,
-        backgroundColor: themedColors.background,
-      },
     }),
     [themedColors]
   );
@@ -145,29 +63,21 @@ const AIMessage = ({ message }: { message: Message }) => {
     <View style={styles.messageContainer}>
       <View style={styles.aiAvatarContainer}>
         <View style={styles.aiAvatar}>
-          <Ionicons name="nutrition" size={20} color={colors.primary} />
+          <Ionicons name="wallet-outline" size={20} color={colors.primary} />
         </View>
       </View>
       <View style={styles.messageContent}>
-        <Text
-          style={[styles.senderName, { color: themedColors.textSecondary }]}
-        >
-          NutriBot
+        <Text style={[styles.senderName, { color: themedColors.textSecondary }]}>
+          FinanceBot
         </Text>
         <Pressable
           onLongPress={() => copyMessageText(message.text)}
           delayLongPress={250}
         >
-          <View
-            style={[
-              styles.aiBubble,
-              { backgroundColor: themedColors.surfaceLight },
-            ]}
-          >
+          <View style={[styles.aiBubble, { backgroundColor: themedColors.surfaceLight }]}>
             <Markdown style={markdownStyle}>{message.text}</Markdown>
           </View>
         </Pressable>
-        {message.mealCard && <MealCard data={message.mealCard} />}
       </View>
     </View>
   );
@@ -175,70 +85,11 @@ const AIMessage = ({ message }: { message: Message }) => {
 
 const UserMessage = ({ message }: { message: Message }) => {
   const themedColors = useThemedColors();
-  const markdownStyle = useMemo(
-    () => ({
-      body: {
-        color: "#FFFFFF",
-        fontFamily: typography.fontFamily.body,
-        fontSize: styles.userText.fontSize,
-        lineHeight: styles.userText.lineHeight,
-      },
-      paragraph: { marginTop: 0, marginBottom: 0 },
-      text: {
-        color: "#FFFFFF",
-        fontFamily: typography.fontFamily.body,
-        fontSize: styles.userText.fontSize,
-        lineHeight: styles.userText.lineHeight,
-      },
-      heading1: {
-        fontSize: styles.userText.fontSize,
-        lineHeight: styles.userText.lineHeight,
-      },
-      heading2: {
-        fontSize: styles.userText.fontSize,
-        lineHeight: styles.userText.lineHeight,
-      },
-      heading3: {
-        fontSize: styles.userText.fontSize,
-        lineHeight: styles.userText.lineHeight,
-      },
-      heading4: {
-        fontSize: styles.userText.fontSize,
-        lineHeight: styles.userText.lineHeight,
-      },
-      heading5: {
-        fontSize: styles.userText.fontSize,
-        lineHeight: styles.userText.lineHeight,
-      },
-      heading6: {
-        fontSize: styles.userText.fontSize,
-        lineHeight: styles.userText.lineHeight,
-      },
-      strong: { fontFamily: typography.fontFamily.display },
-      em: { fontStyle: "italic" as const },
-      link: { color: "#FFFFFF" },
-      code_inline: {
-        fontFamily: typography.fontFamily.body,
-        backgroundColor: themedColors.background,
-      },
-      code_block: {
-        fontFamily: typography.fontFamily.body,
-        backgroundColor: themedColors.background,
-      },
-      fence: {
-        fontFamily: typography.fontFamily.body,
-        backgroundColor: themedColors.background,
-      },
-    }),
-    [themedColors]
-  );
-
+  
   return (
     <View style={styles.userMessageContainer}>
       <View style={styles.userMessageContent}>
-        <Text
-          style={[styles.userSenderName, { color: themedColors.textSecondary }]}
-        >
+        <Text style={[styles.userSenderName, { color: themedColors.textSecondary }]}>
           You
         </Text>
         <Pressable
@@ -246,154 +97,12 @@ const UserMessage = ({ message }: { message: Message }) => {
           delayLongPress={250}
         >
           <View style={styles.userBubble}>
-            <Markdown style={markdownStyle}>{message.text}</Markdown>
+            <Text style={styles.userMessageText}>{message.text}</Text>
           </View>
         </Pressable>
       </View>
       <View style={styles.userAvatar}>
         <Text style={styles.userAvatarText}>ME</Text>
-      </View>
-    </View>
-  );
-};
-
-const MealCard = ({ data }: { data: MealCardData }) => {
-  const navigation = useNavigation();
-  const themedColors = useThemedColors();
-
-  return (
-    <View style={[styles.mealCard, { backgroundColor: themedColors.surface }]}>
-      <View style={styles.mealImageContainer}>
-        <Image
-          source={{ uri: data.imageUrl }}
-          style={styles.mealImage}
-          resizeMode="cover"
-        />
-        <View style={styles.mealImageOverlay} />
-        <View style={styles.mealImageContent}>
-          <Text style={styles.mealCardTitle}>{data.title}</Text>
-          <View style={styles.prepTimeContainer}>
-            <Ionicons name="time-outline" size={14} color="#FFFFFF" />
-            <Text style={styles.prepTimeText}>{data.prepTime}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.mealCardBody}>
-        <View style={styles.caloriesHeader}>
-          <View style={styles.caloriesContainer}>
-            <Text
-              style={[
-                styles.caloriesValue,
-                { color: themedColors.textPrimary },
-              ]}
-            >
-              {data.calories}
-            </Text>
-            <Text
-              style={[
-                styles.caloriesLabel,
-                { color: themedColors.textSecondary },
-              ]}
-            >
-              {"KCAL"}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.viewRecipeButton}
-            onPress={() => {
-              // @ts-ignore - Navigation typing
-              navigation.navigate("MealDetail", { mealId: "1" });
-            }}
-          >
-            <Text style={styles.viewRecipeText}>View Recipe</Text>
-            <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.macrosContainer}>
-          <View style={styles.macroRow}>
-            <Text
-              style={[styles.macroLabel, { color: themedColors.textSecondary }]}
-            >
-              Protein
-            </Text>
-            <View
-              style={[
-                styles.macroBarContainer,
-                { backgroundColor: themedColors.surfaceLight },
-              ]}
-            >
-              <View style={[styles.macroBar, { width: "75%" }]} />
-            </View>
-            <Text
-              style={[styles.macroValue, { color: themedColors.textPrimary }]}
-            >
-              {data.protein}g
-            </Text>
-          </View>
-          <View style={styles.macroRow}>
-            <Text
-              style={[styles.macroLabel, { color: themedColors.textSecondary }]}
-            >
-              Carbs
-            </Text>
-            <View
-              style={[
-                styles.macroBarContainer,
-                { backgroundColor: themedColors.surfaceLight },
-              ]}
-            >
-              <View
-                style={[
-                  styles.macroBar,
-                  { width: "20%", backgroundColor: "#EAB308" },
-                ]}
-              />
-            </View>
-            <Text
-              style={[styles.macroValue, { color: themedColors.textPrimary }]}
-            >
-              {data.carbs}g
-            </Text>
-          </View>
-          <View style={styles.macroRow}>
-            <Text
-              style={[styles.macroLabel, { color: themedColors.textSecondary }]}
-            >
-              Fat
-            </Text>
-            <View
-              style={[
-                styles.macroBarContainer,
-                { backgroundColor: themedColors.surfaceLight },
-              ]}
-            >
-              <View
-                style={[
-                  styles.macroBar,
-                  { width: "45%", backgroundColor: "#FB923C" },
-                ]}
-              />
-            </View>
-            <Text
-              style={[styles.macroValue, { color: themedColors.textPrimary }]}
-            >
-              {data.fat}g
-            </Text>
-          </View>
-        </View>
-
-        {data.tip && (
-          <View style={styles.tipContainer}>
-            <Ionicons name="bulb" size={14} color="#F9A825" />
-            <Text
-              style={[styles.tipText, { color: themedColors.textSecondary }]}
-            >
-              <Text style={styles.tipLabel}>Pro Tip:</Text> {data.tip}
-            </Text>
-          </View>
-        )}
       </View>
     </View>
   );
@@ -435,94 +144,43 @@ const AIChatScreen = () => {
   const [inputText, setInputText] = useState("");
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [conversation, setConversation] = useState<ChatConversation | null>(
-    null
-  );
-  const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  const formatTime = (value?: string | Date) => {
-    if (!value) return "";
-    const d = typeof value === "string" ? new Date(value) : value;
-    if (Number.isNaN(d.getTime())) return "";
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
-
-  const mapMealCard = (metadata?: ChatMessage["metadata"]) => {
-    const suggestion = metadata?.mealSuggestion;
-    if (!suggestion) return undefined;
-
-    return {
-      title: suggestion.mealName,
-      calories: suggestion.calories,
-      prepTime: "",
-      protein: suggestion.macros.protein,
-      carbs: suggestion.macros.carbs,
-      fat: suggestion.macros.fat,
-      imageUrl: suggestion.mealImage || "https://via.placeholder.com/400",
-      tip: undefined,
-    } as MealCardData;
+  const formatTime = (value: Date) => {
+    return value.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   const toUiMessage = (msg: ChatMessage): Message => {
-    const id = msg._id || `${msg.role}-${new Date(msg.timestamp).getTime()}`;
     return {
-      id,
+      id: msg._id || `msg-${Date.now()}-${Math.random()}`,
       text: msg.content,
       isAI: msg.role === "assistant",
-      timestamp: formatTime(msg.timestamp),
-      mealCard: mapMealCard(msg.metadata),
+      timestamp: formatTime(new Date(msg.timestamp)),
     };
   };
 
-  const fallbackMessages = useMemo<Message[]>(
-    () => [
-      {
-        id: "fallback-1",
-        text: "Hi! Ask me about meals, macros, or what to cook with what you have.",
-        isAI: true,
-        timestamp: "",
-      },
-    ],
-    []
-  );
-
   useEffect(() => {
-    let cancelled = false;
-
     const loadConversation = async () => {
-      setIsLoading(true);
       try {
         const conv = await chatApi.getConversation();
-        if (cancelled) return;
-
-        setConversation(conv?._id ? conv : null);
-        const mapped = (conv?.messages || []).map(toUiMessage);
-        setMessages(mapped.length > 0 ? mapped : fallbackMessages);
-      } catch (e: any) {
-        if (cancelled) return;
-
-        setMessages([
-          {
-            id: "error-load",
-            text: e?.message || "Could not load conversation.",
-            isAI: true,
-            timestamp: "",
-          },
-          ...fallbackMessages,
-        ]);
-      } finally {
-        if (!cancelled) setIsLoading(false);
+        if (conv?.messages) {
+           const mapped = conv.messages.map(toUiMessage);
+           if (mapped.length > 0) setMessages(mapped);
+           else setMessages([{
+             id: 'welcome',
+             text: "Hi! I'm your AI Financial Coach. Ask me about your spending, budget, or financial goals.",
+             isAI: true,
+             timestamp: formatTime(new Date())
+           }]);
+        }
+      } catch (e) {
+          // ignore
       }
     };
-
     loadConversation();
+  }, []);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [fallbackMessages]);
 
   const handleSend = async () => {
     const content = inputText.trim();
@@ -549,7 +207,7 @@ const AIChatScreen = () => {
         ...prev,
         {
           id: `error-send-${Date.now()}`,
-          text: e?.message || "I hit an error sending that. Please try again.",
+          text: "I'm having trouble connecting. Please try again.",
           isAI: true,
           timestamp: "",
         },
@@ -575,13 +233,13 @@ const AIChatScreen = () => {
               { backgroundColor: themedColors.surfaceLight },
             ]}
           >
-            <Ionicons name="nutrition" size={18} color={colors.primary} />
+            <Ionicons name="chatbubbles" size={18} color={colors.primary} />
           </View>
           <View>
             <Text
               style={[styles.headerTitle, { color: themedColors.textPrimary }]}
             >
-              NutriBot
+              FinanceBot
             </Text>
             <View style={styles.onlineStatus}>
               <View style={styles.onlineDot} />
@@ -596,13 +254,6 @@ const AIChatScreen = () => {
             </View>
           </View>
         </View>
-        <TouchableOpacity style={styles.menuButton}>
-          <Ionicons
-            name="ellipsis-vertical"
-            size={20}
-            color={colors.textSecondaryDark}
-          />
-        </TouchableOpacity>
       </View>
 
       {/* Messages */}
@@ -611,15 +262,12 @@ const AIChatScreen = () => {
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
         onContentSizeChange={() =>
           scrollRef.current?.scrollToEnd({ animated: true })
         }
       >
         <View style={styles.timestamp}>
-          <Text style={styles.timestampText}>
-            {isLoading ? "Loading…" : "Today"}
-          </Text>
+          <Text style={styles.timestampText}>Today</Text>
         </View>
 
         {messages.map((message) =>
@@ -631,7 +279,7 @@ const AIChatScreen = () => {
         )}
       </ScrollView>
 
-      {/* Bottom Input Area - Floating */}
+      {/* Bottom Input Area */}
       <View
         style={[
           styles.bottomContainer,
@@ -648,7 +296,6 @@ const AIChatScreen = () => {
           },
         ]}
       >
-        {/* Quick Reply Chips - Only show when focused */}
         {enableFocusedFooterUI && isInputFocused && (
           <ScrollView
             horizontal
@@ -656,27 +303,18 @@ const AIChatScreen = () => {
             contentContainerStyle={styles.quickRepliesContent}
             showsHorizontalScrollIndicator={false}
           >
-            <QuickReply icon="restaurant" label="Log Lunch" />
-            <QuickReply icon="pizza" label="Suggest Snack" />
-            <QuickReply icon="time" label="Sho..." />
+            <QuickReply icon="cash" label="Analyze Spend" onPress={() => setInputText("Analyze my spending for this month")} />
+            <QuickReply icon="trending-up" label="Budget Tips" onPress={() => setInputText("Give me some tips to save money")} />
+            <QuickReply icon="alert-circle" label="Over Budget?" onPress={() => setInputText("Am I over my budget?")} />
           </ScrollView>
         )}
 
-        {/* Input Field */}
         <View
           style={[
             styles.inputContainer,
             { backgroundColor: themedColors.background },
           ]}
         >
-          <TouchableOpacity style={styles.cameraButton}>
-            <Ionicons
-              name="camera"
-              size={22}
-              color={themedColors.textSecondary}
-            />
-          </TouchableOpacity>
-
           <View
             style={[
               styles.inputWrapper,
@@ -688,30 +326,14 @@ const AIChatScreen = () => {
           >
             <TextInput
               style={[styles.input, { color: themedColors.textPrimary }]}
-              placeholder="Type a message or log food..."
+              placeholder="Ask about your finances..."
               placeholderTextColor={themedColors.textSecondary}
               value={inputText}
               onChangeText={setInputText}
               multiline
-              textAlignVertical="center"
-              onFocus={() => {
-                if (enableFocusedFooterUI) {
-                  setIsInputFocused(true);
-                }
-              }}
-              onBlur={() => {
-                if (enableFocusedFooterUI) {
-                  setIsInputFocused(false);
-                }
-              }}
+              onFocus={() => enableFocusedFooterUI && setIsInputFocused(true)}
+              onBlur={() => enableFocusedFooterUI && setIsInputFocused(false)}
             />
-            <TouchableOpacity style={styles.micButton}>
-              <Ionicons
-                name="mic"
-                size={18}
-                color={themedColors.textSecondary}
-              />
-            </TouchableOpacity>
           </View>
 
           <TouchableOpacity
@@ -728,13 +350,8 @@ const AIChatScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.backgroundDark,
-  },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
@@ -750,7 +367,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.surfaceDarkLight,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
@@ -759,7 +375,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: colors.textPrimaryDark,
     fontFamily: typography.fontFamily.display,
   },
   onlineDot: {
@@ -776,24 +391,15 @@ const styles = StyleSheet.create({
   },
   onlineText: {
     fontSize: 11,
-    color: colors.textSecondaryDark,
     fontWeight: "400",
-    fontFamily: typography.fontFamily.body,
-  },
-  menuButton: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 18,
   },
   messagesContainer: {
     flex: 1,
   },
   messagesContent: {
     padding: spacing.md,
-    paddingBottom: Platform.OS === "android" ? spacing.md : 120,
-    gap: spacing.screenPadding,
+    paddingBottom: 120,
+    gap: spacing.md,
   },
   timestamp: {
     alignItems: "center",
@@ -801,23 +407,16 @@ const styles = StyleSheet.create({
   },
   timestampText: {
     fontSize: 12,
-    fontWeight: "500",
-    color: colors.textSecondaryDark,
-    backgroundColor: colors.surfaceDarkLight,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    fontFamily: typography.fontFamily.body,
+    color: colors.gray[500],
   },
   messageContainer: {
     flexDirection: "row",
-    alignItems: "flex-end",
     gap: 12,
-    maxWidth: "85%",
+    paddingRight: 40,
   },
   aiAvatarContainer: {
-    width: 32,
-    height: 32,
+      justifyContent: 'flex-end',
+      paddingBottom: 4,
   },
   aiAvatar: {
     width: 32,
@@ -826,8 +425,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceDarkLight,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   messageContent: {
     flex: 1,
@@ -835,310 +432,105 @@ const styles = StyleSheet.create({
   },
   senderName: {
     fontSize: 12,
-    color: "#a3b2a4",
     marginLeft: 4,
-    fontFamily: typography.fontFamily.body,
   },
   aiBubble: {
-    backgroundColor: "#2A2D31",
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: radius.xl,
     borderBottomLeftRadius: 4,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.05)",
-  },
-  aiText: {
-    fontSize: 14,
-    color: "#E5E5E5",
-    lineHeight: 20,
-    fontFamily: typography.fontFamily.body,
   },
   userMessageContainer: {
     flexDirection: "row",
-    alignItems: "flex-end",
     justifyContent: "flex-end",
     gap: 12,
-    maxWidth: "85%",
-    alignSelf: "flex-end",
+    paddingLeft: 40,
   },
   userMessageContent: {
     flex: 1,
+    alignItems: 'flex-end',
     gap: 4,
-    alignItems: "flex-end",
   },
   userSenderName: {
     fontSize: 12,
-    color: "#a3b2a4",
     marginRight: 4,
-    fontFamily: typography.fontFamily.body,
   },
   userBubble: {
     backgroundColor: colors.primary,
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: radius.xl,
     borderBottomRightRadius: 4,
-    padding: 14,
   },
-  userText: {
-    fontSize: 14,
+  userMessageText: {
     color: "#FFFFFF",
-    lineHeight: 20,
-    fontFamily: typography.fontFamily.body,
+    fontSize: 16,
   },
   userAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#6366F1",
-    alignItems: "center",
-    justifyContent: "center",
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 'auto',
   },
   userAvatarText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    fontFamily: typography.fontFamily.display,
-  },
-  mealCard: {
-    marginTop: 8,
-    borderRadius: radius.xl,
-    backgroundColor: colors.surfaceDark,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    overflow: "hidden",
-    ...shadows.lg,
-  },
-  mealImageContainer: {
-    height: 160,
-    position: "relative",
-  },
-  mealImage: {
-    width: "100%",
-    height: "100%",
-  },
-  mealImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-  },
-  mealImageContent: {
-    position: "absolute",
-    bottom: 12,
-    left: 12,
-  },
-  mealCardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginBottom: 4,
-    fontFamily: typography.fontFamily.display,
-  },
-  prepTimeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  prepTimeText: {
-    fontSize: 12,
-    color: "#FFFFFF",
-    opacity: 0.9,
-    fontFamily: typography.fontFamily.body,
-  },
-  mealCardBody: {
-    padding: spacing.md,
-  },
-  caloriesHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  caloriesContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 4,
-  },
-  caloriesValue: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: colors.textPrimaryDark,
-    fontFamily: typography.fontFamily.display,
-  },
-  caloriesLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.textSecondaryDark,
-    fontFamily: typography.fontFamily.display,
-  },
-  viewRecipeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  viewRecipeText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.primary,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    fontFamily: typography.fontFamily.display,
-  },
-  macrosContainer: {
-    gap: 12,
-  },
-  macroRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  macroLabel: {
-    width: 48,
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.textSecondaryDark,
-    fontFamily: typography.fontFamily.body,
-  },
-  macroBarContainer: {
-    flex: 1,
-    height: 8,
-    backgroundColor: colors.surfaceDarkLight,
-    borderRadius: radius.full,
-    overflow: "hidden",
-  },
-  macroBar: {
-    height: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
-  },
-  macroValue: {
-    width: 32,
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.textPrimaryDark,
-    textAlign: "right",
-    fontFamily: typography.fontFamily.display,
-  },
-  tipContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    backgroundColor: "rgba(249, 168, 37, 0.1)",
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(249, 168, 37, 0.2)",
-    marginTop: spacing.md,
-    marginHorizontal: -spacing.md,
-    marginBottom: -spacing.md,
-  },
-  tipText: {
-    flex: 1,
-    fontSize: 12,
-    color: "#FDB462",
-    lineHeight: 18,
-    fontFamily: typography.fontFamily.body,
-  },
-  tipLabel: {
-    fontWeight: "700",
-    color: "#F9A825",
-    fontFamily: typography.fontFamily.display,
+      color: '#fff',
+      fontSize: 10,
+      fontWeight: 'bold',
   },
   bottomContainer: {
-    // On some Android devices (notably some Samsung builds), an absolutely-positioned
-    // input footer can cause the keyboard to flicker (open then immediately close).
-    // Keep the floating layout on iOS, but use a normal footer on Android.
-    position: Platform.OS === "ios" ? "absolute" : "relative",
-    bottom: Platform.OS === "ios" ? 68 : 0,
-    left: 0,
-    right: 0,
-    zIndex: 20,
-    elevation: 20,
-    backgroundColor: colors.backgroundDark,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.xs,
     paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.05)",
   },
   bottomContainerExpanded: {
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    backgroundColor: "rgba(26, 27, 30, 0.98)",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
-    ...shadows.lg,
+      paddingBottom: 12,
   },
   quickRepliesContainer: {
-    marginBottom: spacing.sm,
-    maxHeight: 40,
+    marginBottom: spacing.md,
   },
   quickRepliesContent: {
-    gap: 8,
-    paddingRight: spacing.md,
+      gap: 8,
+      paddingHorizontal: 4,
   },
   quickReplyChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: "#2A2D31",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: radius.full,
   },
   quickReplyText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.textPrimaryDark,
-    fontFamily: typography.fontFamily.body,
+      fontSize: 12,
+      fontWeight: '600',
   },
   inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  cameraButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "transparent",
-    alignItems: "center",
-    justifyContent: "center",
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 8,
   },
   inputWrapper: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingLeft: 14,
-    paddingRight: 2,
-    minHeight: 40,
-    maxHeight: 100,
+      flex: 1,
+      minHeight: 44,
+      borderRadius: 22,
+      borderWidth: 1,
+      paddingHorizontal: 16,
+      justifyContent: 'center',
   },
   input: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.textPrimaryDark,
-    paddingVertical: 10,
-    paddingRight: 6,
-    includeFontPadding: false,
-    fontFamily: typography.fontFamily.body,
-  },
-  micButton: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
+      fontSize: 16,
+      maxHeight: 100,
+      paddingVertical: 8,
   },
   sendButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    ...shadows.md,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
   },
 });
 

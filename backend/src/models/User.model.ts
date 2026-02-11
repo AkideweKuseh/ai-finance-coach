@@ -8,18 +8,10 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IUserProfile {
   age: number;
-  height: number; // cm
-  weight: number; // kg
-  goal: "lose" | "maintain" | "gain";
-  activityLevel: "sedentary" | "light" | "moderate" | "active" | "athlete";
-  dietaryPreferences: string[];
-  dailyCalorieGoal: number;
-  macroGoals: {
-    protein: number;
-    carbs: number;
-    fat: number;
-  };
-  unitPreference: "metric" | "imperial";
+  monthlyIncome: number;
+  riskTolerance: "conservative" | "moderate" | "aggressive";
+  primaryGoal: "save_emergency" | "pay_debt" | "invest" | "budget_control";
+  spendingCategories: string[];
 }
 
 export interface IUser extends Document {
@@ -34,32 +26,20 @@ export interface IUser extends Document {
 
 const UserProfileSchema = new Schema<IUserProfile>({
   age: { type: Number, required: true, min: 13, max: 120 },
-  height: { type: Number, required: true, min: 100, max: 300 },
-  weight: { type: Number, required: true, min: 30, max: 300 },
-  goal: {
+  monthlyIncome: { type: Number, required: true, min: 0 },
+  riskTolerance: {
     type: String,
     required: true,
-    enum: ["lose", "maintain", "gain"],
-    default: "maintain",
-  },
-  activityLevel: {
-    type: String,
-    required: true,
-    enum: ["sedentary", "light", "moderate", "active", "athlete"],
+    enum: ["conservative", "moderate", "aggressive"],
     default: "moderate",
   },
-  dietaryPreferences: [{ type: String }],
-  dailyCalorieGoal: { type: Number, required: true, min: 1000, max: 5000 },
-  macroGoals: {
-    protein: { type: Number, required: true, min: 0 },
-    carbs: { type: Number, required: true, min: 0 },
-    fat: { type: Number, required: true, min: 0 },
-  },
-  unitPreference: {
+  primaryGoal: {
     type: String,
-    enum: ["metric", "imperial"],
-    default: "metric",
+    required: true,
+    enum: ["save_emergency", "pay_debt", "invest", "budget_control"],
+    default: "budget_control",
   },
+  spendingCategories: [{ type: String }],
 });
 
 const UserSchema = new Schema<IUser>(

@@ -14,39 +14,27 @@ export interface User {
 export interface UserProfile {
   // Basic stats
   age: number;
-  height: number; // in cm
-  weight: number; // in kg
+  monthlyIncome: number;
 
-  // Goals
-  goal: "lose" | "maintain" | "gain";
-  activityLevel: "sedentary" | "light" | "moderate" | "active" | "athlete";
+  // Goals & Preferences
+  primaryGoal: "save_emergency" | "pay_debt" | "invest" | "budget_control";
+  riskTolerance: "conservative" | "moderate" | "aggressive";
 
-  // Dietary preferences
-  dietaryPreferences: DietaryPreference[];
-
-  // Calculated values
-  dailyCalorieGoal: number;
-  macroGoals: MacroGoals;
+  // Categories
+  spendingCategories: string[];
 
   // UI preferences
-  unitPreference: "metric" | "imperial";
+  currency: string;
 }
 
-export interface MacroGoals {
-  protein: number; // grams
-  carbs: number; // grams
-  fat: number; // grams
+export interface SpendingSummary {
+  date: string; // ISO date string
+  totalSpent: number;
+  budgetLimit: number;
+  emotionalSpendingCount: number;
+  topTrigger?: string;
+  savingsProgress: number;
 }
-
-export type DietaryPreference =
-  | "vegan"
-  | "vegetarian"
-  | "paleo"
-  | "keto"
-  | "gluten-free"
-  | "dairy-free"
-  | "halal"
-  | "kosher";
 
 export interface UserRegistrationData {
   email: string;
@@ -65,11 +53,4 @@ export interface UserUpdateData {
   profile?: Partial<UserProfile>;
 }
 
-export interface DailySummary {
-  date: string; // ISO date string
-  caloriesConsumed: number;
-  macrosConsumed: MacroGoals;
-  caloriesRemaining: number;
-  macrosRemaining: MacroGoals;
-  mealsLogged: number;
-}
+

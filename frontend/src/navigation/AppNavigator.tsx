@@ -13,13 +13,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, useThemedColors } from "../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Import screens (placeholders - will be created)
+// Import screens
 import AuthNavigator from "./AuthNavigator";
 import DashboardScreen from "../screens/DashboardScreen";
 import AIChatScreen from "../screens/AIChatScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import SettingsScreen from "../screens/SettingsScreen";
-import MealDetailScreen from "../screens/MealDetailScreen";
+import TransactionDetailScreen from "../screens/TransactionDetailScreen";
+import LogTransactionScreen from "../screens/LogTransactionScreen";
 
 import { RootStackParamList, MainTabParamList } from "./types";
 import { useAuthStore } from "../stores/authStore";
@@ -120,7 +121,12 @@ const RootNavigator = () => {
       {isAuthenticated ? (
         <>
           <RootStack.Screen name="Main" component={MainTabNavigator} />
-          <RootStack.Screen name="MealDetail" component={MealDetailScreen} />
+          <RootStack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
+          <RootStack.Screen 
+            name="LogTransaction" 
+            component={LogTransactionScreen} 
+            options={{ presentation: 'modal' }}
+          />
         </>
       ) : (
         <RootStack.Screen name="Auth" component={AuthNavigator} />

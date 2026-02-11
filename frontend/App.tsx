@@ -23,7 +23,7 @@ import * as userApi from "./src/api/user";
 export default function App() {
   const { loadTokens, isAuthenticated } = useAuthStore();
   const { loadTheme, isDark } = useThemeStore();
-  const { user, setUser, dailySummary, setDailySummary } = useUserStore();
+  const { user, setUser, spendingSummary, setSpendingSummary } = useUserStore();
 
   const [fontsLoaded, fontError] = useFonts({
     "RobotoMono-Regular": RobotoMono_400Regular,
@@ -50,9 +50,9 @@ export default function App() {
           if (!cancelled) setUser(profile);
         }
 
-        if (!dailySummary) {
-          const summary = await userApi.getDailySummary();
-          if (!cancelled) setDailySummary(summary);
+        if (!spendingSummary) {
+          const summary = await userApi.getSpendingSummary();
+          if (!cancelled) setSpendingSummary(summary);
         }
       } catch (e) {
         // Best-effort hydration; screens can still render with defaults.
@@ -63,7 +63,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, user, dailySummary, setUser, setDailySummary]);
+  }, [isAuthenticated, user, spendingSummary, setUser, setSpendingSummary]);
 
   useEffect(() => {
     if (fontError) {

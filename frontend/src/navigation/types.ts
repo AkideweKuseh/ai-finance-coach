@@ -9,10 +9,12 @@ import { CompositeScreenProps } from "@react-navigation/native";
 /**
  * Root Stack Navigator (Authentication Flow)
  */
+// Import screens
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
-  MealDetail: { mealId: string };
+  TransactionDetail: { transactionId: string };
+  LogTransaction: undefined;
 };
 
 export type AuthStackParamList = {
@@ -42,20 +44,6 @@ export type MainTabScreenProps<T extends keyof MainTabParamList> =
   CompositeScreenProps<
     BottomTabScreenProps<MainTabParamList, T>,
     RootStackScreenProps<keyof RootStackParamList>
-  >;
-
-/**
- * Meal Stack Navigator
- */
-export type MealStackParamList = {
-  MealList: undefined;
-  MealDetail: { mealId: string };
-};
-
-export type MealStackScreenProps<T extends keyof MealStackParamList> =
-  CompositeScreenProps<
-    NativeStackScreenProps<MealStackParamList, T>,
-    MainTabScreenProps<keyof MainTabParamList>
   >;
 
 declare global {

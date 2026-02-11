@@ -1,22 +1,22 @@
 /**
  * User Store - Zustand
  *
- * Manages user profile, goals, and daily summary
+ * Manages user profile, financial goals, and spending summary
  */
 
 import { create } from "zustand";
-import { User, UserProfile, DailySummary } from "../types/user";
+import { User, UserProfile, SpendingSummary } from "../types/user";
 
 interface UserState {
   // State
   user: User | null;
-  dailySummary: DailySummary | null;
+  spendingSummary: SpendingSummary | null;
   isLoading: boolean;
 
   // Actions
   setUser: (user: User) => void;
   updateProfile: (profile: Partial<UserProfile>) => void;
-  setDailySummary: (summary: DailySummary) => void;
+  setSpendingSummary: (summary: SpendingSummary) => void;
   clearUser: () => void;
   setLoading: (isLoading: boolean) => void;
 }
@@ -24,7 +24,7 @@ interface UserState {
 export const useUserStore = create<UserState>((set: any) => ({
   // Initial state
   user: null,
-  dailySummary: null,
+  spendingSummary: null,
   isLoading: false,
 
   /**
@@ -54,10 +54,10 @@ export const useUserStore = create<UserState>((set: any) => ({
   },
 
   /**
-   * Set daily calorie and macro summary
+   * Set spending summary
    */
-  setDailySummary: (summary: DailySummary) => {
-    set({ dailySummary: summary });
+  setSpendingSummary: (summary: SpendingSummary) => {
+    set({ spendingSummary: summary });
   },
 
   /**
@@ -66,7 +66,7 @@ export const useUserStore = create<UserState>((set: any) => ({
   clearUser: () => {
     set({
       user: null,
-      dailySummary: null,
+      spendingSummary: null,
       isLoading: false,
     });
   },

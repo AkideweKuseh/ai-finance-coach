@@ -48,22 +48,18 @@ export const registerValidation = [
     .optional()
     .isInt({ min: 13, max: 120 })
     .withMessage("Age must be between 13 and 120"),
-  body("profile.height")
+  body("profile.monthlyIncome")
     .optional()
-    .isFloat({ min: 100, max: 300 })
-    .withMessage("Height must be between 100 and 300 cm"),
-  body("profile.weight")
+    .isFloat({ min: 0 })
+    .withMessage("Income must be a positive number"),
+  body("profile.riskTolerance")
     .optional()
-    .isFloat({ min: 30, max: 300 })
-    .withMessage("Weight must be between 30 and 300 kg"),
-  body("profile.goal")
+    .isIn(["conservative", "moderate", "aggressive"])
+    .withMessage("Invalid risk tolerance"),
+  body("profile.primaryGoal")
     .optional()
-    .isIn(["lose", "maintain", "gain"])
-    .withMessage("Goal must be lose, maintain, or gain"),
-  body("profile.activityLevel")
-    .optional()
-    .isIn(["sedentary", "light", "moderate", "active", "athlete"])
-    .withMessage("Invalid activity level"),
+    .isIn(["save_emergency", "pay_debt", "invest", "budget_control"])
+    .withMessage("Invalid primary goal"),
 ];
 
 /**
@@ -88,17 +84,32 @@ export const chatMessageValidation = [
 ];
 
 /**
- * Meal log validation rules
+ * Transaction log validation rules
  */
-export const mealLogValidation = [
-  body("mealId").isMongoId().withMessage("Invalid meal ID"),
-  body("date").isISO8601().withMessage("Invalid date format"),
-  body("mealType")
-    .isIn(["breakfast", "lunch", "dinner", "snack"])
-    .withMessage("Invalid meal type"),
-  body("servings")
-    .isFloat({ min: 0.1, max: 10 })
-    .withMessage("Servings must be between 0.1 and 10"),
+export const transactionValidation = [
+  body("description")
+    .trim()
+    .notEmpty()
+    .withMessage("Description is required"),
+  body("amount")
+    .isFloat({ min: 0.01 })
+    .withMessage("Amount must be greater than 0"),
+  body("category")
+    .trim()
+    .notEmpty()
+    .withMessage("Category is required"),
+  body("mood")
+    .optional()
+    .isIn(["stressed", "happy", "neutral", "bored", "anxious", "excited", "sad"])
+    .withMessage("Invalid mood"),
+  body("trigger")
+    .optional()
+    .isIn(["peer_pressure", "stress", "celebration", "habit", "boredom", "necessity"])
+    .withMessage("Invalid trigger"),
+  body("date")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid date format"),
 ];
 
 export default {
@@ -106,5 +117,5 @@ export default {
   registerValidation,
   loginValidation,
   chatMessageValidation,
-  mealLogValidation,
+  transactionValidation,
 };

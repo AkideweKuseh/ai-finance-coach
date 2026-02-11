@@ -10,7 +10,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AuthStackParamList } from "../navigation/types";
-import { colors, spacing, useThemedColors } from "../theme";
+import { colors, spacing, useThemedColors, typography, radius } from "../theme";
 import { useAuthStore } from "../stores/authStore";
 import { useUserStore } from "../stores/userStore";
 import { ScreenContainer } from "../components/common/ScreenContainer";
@@ -21,6 +21,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as authApi from "../api/auth";
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, "SignUp">;
+type FinancialGoal = "save_emergency" | "pay_debt" | "invest" | "budget_control";
+type RiskTolerance = "conservative" | "moderate" | "aggressive";
 
 const SignUpScreen = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -28,6 +30,9 @@ const SignUpScreen = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [income, setIncome] = useState("");
+  const [goal, setGoal] = useState<FinancialGoal>("save_emergency");
+  const [risk, setRisk] = useState<RiskTolerance>("moderate");
   const [loading, setLoading] = useState(false);
 
   const { setTokens } = useAuthStore();
@@ -49,7 +54,13 @@ const SignUpScreen = () => {
         name,
         email,
         password,
-        profile: {},
+        profile: {
+            monthlyIncome: income ? parseFloat(income) : 0,
+            primaryGoal: goal,
+            riskTolerance: risk,
+            currency: "USD",
+            spendingCategories: []
+        },
       });
 
       setUser(user);
@@ -61,6 +72,20 @@ const SignUpScreen = () => {
       setLoading(false);
     }
   };
+
+  const renderGoalOption = (g: FinancialGoal, label: string, icon: any) => (
+      <TouchableOpacity 
+        style={[
+            styles.optionButton, 
+            goal === g && styles.optionButtonSelected,
+            { backgroundColor: themedColors.surface, borderColor: themedColors.border }
+        ]}
+        onPress={() => setGoal(g)}
+      >
+          <Text style={{ fontSize: 20 }}>{icon}</Text>
+          <Text style={[styles.optionLabel, { color: themedColors.textPrimary }]}>{label}</Text>
+      </TouchableOpacity>
+  );
 
   return (
     <ScreenContainer backgroundColor={themedColors.background}>
@@ -87,37 +112,72 @@ const SignUpScreen = () => {
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>
-              Join us to start your personalized nutrition journey today.
+              Start your journey to financial freedom.
             </Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.label}>Your name</Text>
+            <Text style={styles.label}>Your Details</Text>
             <Input
-              placeholder="Your name"
+              placeholder="Full Name"
               value={name}
               onChangeText={setName}
               containerStyle={styles.inputContainer}
             />
-
-            <Text style={styles.label}>Your email</Text>
             <Input
-              placeholder="Your email"
+              placeholder="Email Address"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
               containerStyle={styles.inputContainer}
             />
-
-            <Text style={styles.label}>Create a password</Text>
             <Input
-              placeholder="Create a password"
+              placeholder="Password"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
               containerStyle={styles.inputContainer}
             />
+            
+            <Text style={styles.label}>Financial Profile</Text>
+            <Input
+              placeholder="Monthly Income (approx)"
+              value={income}
+              onChangeText={setIncome}
+              keyboardType="numeric"
+              containerStyle={styles.inputContainer}
+            />
+            
+            <Text style={styles.subLabel}>Primary Goal</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.optionsScroll}>
+                {renderGoalOption("save_emergency", "Safety Net", "🛡️")}
+                {renderGoalOption("pay_debt", "Pay Debt", "📉")}
+                {renderGoalOption("invest", "Invest", "📈")}
+                {renderGoalOption("budget_control", "Budget", "👛")}
+            </ScrollView>
+
+            <Text style={styles.subLabel}>Risk Tolerance</Text>
+            <View style={styles.riskContainer}>
+                {(['conservative', 'moderate', 'aggressive'] as RiskTolerance[]).map(r => (
+                    <TouchableOpacity
+                        key={r}
+                        style={[
+                            styles.riskButton,
+                            risk === r && { backgroundColor: colors.primary, borderColor: colors.primary },
+                            { borderColor: themedColors.border }
+                        ]}
+                        onPress={() => setRisk(r)}
+                    >
+                        <Text style={[
+                            styles.riskText, 
+                            { color: risk === r ? '#fff' : themedColors.textSecondary }
+                        ]}>
+                            {r.charAt(0).toUpperCase() + r.slice(1)}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
 
             <Text style={styles.infoText}>
               By signing up, you agree to our{" "}
@@ -198,39 +258,86 @@ const styles = StyleSheet.create({
     marginBottom: spacing["2xl"],
   },
   title: {
-    fontFamily: "RobotoMono-Bold",
     fontSize: 32,
+    fontWeight: '700',
     color: colors.textPrimaryLight,
     marginBottom: spacing.sm,
+    fontFamily: typography.fontFamily.display,
   },
   subtitle: {
-    fontFamily: "RobotoMono-Regular",
     fontSize: 13,
     color: colors.textSecondaryLight,
     lineHeight: 20,
+    fontFamily: typography.fontFamily.body,
   },
   link: {
-    fontFamily: "RobotoMono-Bold",
+    fontWeight: '700',
     color: colors.textPrimaryLight,
   },
   form: {
     marginBottom: spacing.xl,
   },
   label: {
-    fontFamily: "RobotoMono-Medium",
     fontSize: 14,
     color: colors.textSecondaryLight,
     marginBottom: spacing.sm,
+    marginTop: spacing.sm,
+    fontFamily: typography.fontFamily.body,
+  },
+  subLabel: {
+      fontSize: 12,
+      color: colors.textSecondaryLight,
+      marginBottom: spacing.xs,
+      marginTop: spacing.sm,
+      fontFamily: typography.fontFamily.body,
   },
   inputContainer: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  optionsScroll: {
+      flexDirection: 'row',
+      marginBottom: spacing.md,
+  },
+  optionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: spacing.sm,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      marginRight: spacing.sm,
+      gap: 8,
+  },
+  optionButtonSelected: {
+      borderColor: colors.primary,
+      backgroundColor: `${colors.primary}1A`,
+  },
+  optionLabel: {
+      fontWeight: '600',
+      fontSize: 12,
+  },
+  riskContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 8,
+      marginBottom: spacing.lg,
+  },
+  riskButton: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 10,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+  },
+  riskText: {
+      fontWeight: '600',
+      fontSize: 12,
   },
   infoText: {
-    fontFamily: "RobotoMono-Regular",
     fontSize: 12,
     color: colors.textSecondaryLight,
     marginBottom: spacing.lg,
     lineHeight: 18,
+    fontFamily: typography.fontFamily.body,
   },
   signupButton: {
     marginBottom: spacing.xl,
@@ -246,10 +353,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray[200],
   },
   dividerText: {
-    fontFamily: "RobotoMono-Regular",
     marginHorizontal: spacing.md,
     color: colors.textSecondaryLight,
     fontSize: 12,
+    fontFamily: typography.fontFamily.body,
   },
   socialRow: {
     flexDirection: "row",
@@ -271,16 +378,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   footerText: {
-    fontFamily: "RobotoMono-Regular",
     fontSize: 13,
     color: colors.textSecondaryLight,
     textAlign: "center",
+    fontFamily: typography.fontFamily.body,
   },
   linkText: {
-    fontFamily: "RobotoMono-Bold",
+    fontWeight: '700',
     fontSize: 13,
     color: colors.primary,
     textDecorationLine: "underline",
+    fontFamily: typography.fontFamily.body,
   },
 });
 

@@ -3,7 +3,7 @@
  */
 
 import apiClient, { handleApiError } from "./client";
-import { User, UserUpdateData, DailySummary } from "../types/user";
+import { User, UserUpdateData, SpendingSummary } from "../types/user";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -50,13 +50,13 @@ export const updateProfile = async (data: UserUpdateData): Promise<User> => {
 };
 
 /**
- * Get daily calorie and macro summary
+ * Get spending summary
  */
-export const getDailySummary = async (date?: string): Promise<DailySummary> => {
+export const getSpendingSummary = async (date?: string): Promise<SpendingSummary> => {
   try {
     const params = date ? { date } : {};
-    const response = await apiClient.get<ApiResponse<DailySummary>>(
-      "/user/daily-summary",
+    const response = await apiClient.get<ApiResponse<SpendingSummary>>(
+      "/user/spending-summary",
       {
         params,
       }
@@ -86,6 +86,6 @@ export const deleteAccount = async (): Promise<void> => {
 export default {
   getProfile,
   updateProfile,
-  getDailySummary,
+  getSpendingSummary,
   deleteAccount,
 };

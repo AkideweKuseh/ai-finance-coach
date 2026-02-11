@@ -6,16 +6,16 @@
  */
 
 export const colors = {
-  // Primary brand colors
-  primary: "#2f7f34",
-  primaryDark: "#236327",
-  primaryHover: "#25662a",
-  primaryLight: "#4caf50",
+  // Primary brand colors (Blue)
+  primary: "#2D9CDB",
+  primaryDark: "#1A5F8A",
+  primaryHover: "#3AA8E0",
+  primaryLight: "#56CCF2",
 
-  // Accent colors
-  accent: "#FFA726",
-  accentOrange: "#fb923c",
-  accentYellow: "#F9A825",
+  // Accent colors (Gold)
+  accent: "#F2C94C",
+  accentOrange: "#F2994A",
+  accentYellow: "#F2C94C",
 
   // Background colors
   backgroundLight: "#f6f8f6",

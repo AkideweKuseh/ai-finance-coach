@@ -25,35 +25,29 @@ const LandingScreen = () => {
           <View style={[styles.cloud, styles.cloud1]} />
           <View style={[styles.cloud, styles.cloud2]} />
           <Ionicons
-            name="add"
+            name="cash-outline"
             size={24}
             color="rgba(255, 255, 255, 0.3)"
             style={styles.plus1}
           />
           <Ionicons
-            name="add"
+            name="trending-up"
             size={16}
             color="rgba(255, 255, 255, 0.3)"
             style={styles.plus2}
           />
           <Ionicons
-            name="add"
+            name="wallet-outline"
             size={20}
             color="rgba(255, 255, 255, 0.3)"
             style={styles.plus3}
-          />
-          <Ionicons
-            name="add"
-            size={14}
-            color="rgba(255, 255, 255, 0.3)"
-            style={styles.plus4}
           />
         </View>
 
         {/* Main illustration area */}
         <View style={styles.illustrationContainer}>
           <View style={styles.illustrationCircle}>
-            <Ionicons name="nutrition" size={120} color="#FFFFFF" />
+            <Ionicons name="card" size={100} color="#FFFFFF" />
           </View>
           <Ionicons
             name="star"
@@ -73,11 +67,10 @@ const LandingScreen = () => {
         <View style={styles.content}>
           <View style={styles.textContainer}>
             <Text style={styles.title}>
-              AI-powered nutrition{"\n"}for a healthier you.
+              Master your money{"\n"}with AI coaching.
             </Text>
             <Text style={styles.subtitle}>
-              Personalized meal plans and expert{"\n"}guidance for your wellness
-              journey.
+              Personalized budget plans and expert{"\n"}financial guidance for your future.
             </Text>
           </View>
 
@@ -95,7 +88,7 @@ const LandingScreen = () => {
             />
           </View>
 
-          <Text style={styles.brandName}>AI Diet Consultant</Text>
+          <Text style={styles.brandName}>AI Financial Coach</Text>
         </View>
       </View>
     </ScreenContainer>
@@ -145,11 +138,6 @@ const styles = StyleSheet.create({
     top: 140,
     left: "50%",
   },
-  plus4: {
-    position: "absolute",
-    top: 80,
-    right: "25%",
-  },
   illustrationContainer: {
     flex: 1,
     justifyContent: "center",
@@ -158,9 +146,9 @@ const styles = StyleSheet.create({
     marginTop: 80,
   },
   illustrationCircle: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",

@@ -34,10 +34,11 @@ const SettingsScreen = () => {
   const { user, clearUser } = useUserStore();
   const { themeMode, isDark, setThemeMode } = useThemeStore();
   const themedColors = useThemedColors();
-  const [useMetric, setUseMetric] = useState(true);
-  const [mealReminders, setMealReminders] = useState(true);
-  const [hydrationAlerts, setHydrationAlerts] = useState(false);
-  const [weeklyDigest, setWeeklyDigest] = useState(true);
+  
+  const [spendingAlerts, setSpendingAlerts] = useState(true);
+  const [budgetCheckins, setBudgetCheckins] = useState(false);
+  const [weeklyReport, setWeeklyReport] = useState(true);
+  const [currency, setCurrency] = useState("USD");
 
   const handleLogout = async () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -96,12 +97,9 @@ const SettingsScreen = () => {
           >
             <View style={styles.avatarContainer}>
               <Image
-                source={{ uri: "https://via.placeholder.com/64" }}
+                source={{ uri: "https://ui-avatars.com/api/?name=" + (user?.name || "User") + "&background=2D9CDB&color=fff" }}
                 style={styles.avatar}
               />
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark" size={14} color="#FFFFFF" />
-              </View>
             </View>
             <View style={styles.profileInfo}>
               <View style={styles.profileNameRow}>
@@ -113,10 +111,6 @@ const SettingsScreen = () => {
                 >
                   {user?.name || ""}
                 </Text>
-                <View style={styles.proBadge}>
-                  <Text style={styles.proText}>PRO</Text>
-                  <Text style={styles.proStar}>⭐️</Text>
-                </View>
               </View>
               <Text
                 style={[
@@ -150,75 +144,17 @@ const SettingsScreen = () => {
               { backgroundColor: themedColors.surface },
             ]}
           >
-            {/* Units Preference */}
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Text style={styles.settingEmoji}>📏</Text>
-                <Text
-                  style={[
-                    styles.settingTitle,
-                    { color: themedColors.textPrimary },
-                  ]}
-                >
-                  Units
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.segmentedControl,
-                  { backgroundColor: themedColors.surfaceLight },
-                ]}
-              >
-                <TouchableOpacity
-                  style={[
-                    styles.segmentButton,
-                    useMetric && styles.segmentButtonActive,
-                    useMetric && {
-                      backgroundColor: themedColors.isDark
-                        ? colors.backgroundDark
-                        : colors.primary,
-                    },
-                  ]}
-                  onPress={() => setUseMetric(true)}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      { color: themedColors.textSecondary },
-                      useMetric && {
-                        color: themedColors.isDark ? colors.primary : "#FFFFFF",
-                      },
-                    ]}
-                  >
-                    Metric (kg)
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.segmentButton,
-                    !useMetric && styles.segmentButtonActive,
-                    !useMetric && {
-                      backgroundColor: themedColors.isDark
-                        ? colors.backgroundDark
-                        : colors.primary,
-                    },
-                  ]}
-                  onPress={() => setUseMetric(false)}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      { color: themedColors.textSecondary },
-                      !useMetric && {
-                        color: themedColors.isDark ? colors.primary : "#FFFFFF",
-                      },
-                    ]}
-                  >
-                    Imperial (lbs)
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            {/* Currency Preference */}
+            <TouchableOpacity style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                    <Text style={styles.settingEmoji}>💲</Text>
+                    <Text style={[styles.settingTitle, { color: themedColors.textPrimary }]}>Currency</Text>
+                </View>
+                <View style={styles.settingRight}>
+                    <Text style={[styles.settingValue, { color: themedColors.textSecondary }]}>{currency}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={themedColors.textSecondary} />
+                </View>
+            </TouchableOpacity>
 
             <View
               style={[styles.divider, { backgroundColor: themedColors.border }]}
@@ -255,40 +191,6 @@ const SettingsScreen = () => {
                 }
               />
             </TouchableOpacity>
-
-            <View
-              style={[styles.divider, { backgroundColor: themedColors.border }]}
-            />
-
-            {/* Language */}
-            <TouchableOpacity style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Text style={styles.settingEmoji}>🗣️</Text>
-                <Text
-                  style={[
-                    styles.settingTitle,
-                    { color: themedColors.textPrimary },
-                  ]}
-                >
-                  Language
-                </Text>
-              </View>
-              <View style={styles.settingRight}>
-                <Text
-                  style={[
-                    styles.settingValue,
-                    { color: themedColors.textSecondary },
-                  ]}
-                >
-                  English (US)
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={18}
-                  color={themedColors.textSecondary}
-                />
-              </View>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -305,7 +207,7 @@ const SettingsScreen = () => {
               { backgroundColor: themedColors.surface },
             ]}
           >
-            {/* Meal Reminders */}
+            {/* Spending Alerts */}
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <Text style={styles.settingEmoji}>🔔</Text>
@@ -316,7 +218,7 @@ const SettingsScreen = () => {
                       { color: themedColors.textPrimary },
                     ]}
                   >
-                    Meal Reminders
+                    Spending Alerts
                   </Text>
                   <Text
                     style={[
@@ -324,13 +226,13 @@ const SettingsScreen = () => {
                       { color: themedColors.textSecondary },
                     ]}
                   >
-                    Get nudged at breakfast, lunch, & dinner
+                    Get notified when you overspend
                   </Text>
                 </View>
               </View>
               <Switch
-                value={mealReminders}
-                onValueChange={setMealReminders}
+                value={spendingAlerts}
+                onValueChange={setSpendingAlerts}
                 trackColor={{
                   false: isDark ? colors.gray[600] : colors.gray[500],
                   true: colors.primary,
@@ -346,22 +248,22 @@ const SettingsScreen = () => {
               style={[styles.divider, { backgroundColor: themedColors.border }]}
             />
 
-            {/* Hydration Alerts */}
+            {/* Budget Check-ins */}
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
-                <Text style={styles.settingEmoji}>💧</Text>
+                <Text style={styles.settingEmoji}>📈</Text>
                 <Text
                   style={[
                     styles.settingTitle,
                     { color: themedColors.textPrimary },
                   ]}
                 >
-                  Hydration Alerts
+                  Budget Check-ins
                 </Text>
               </View>
               <Switch
-                value={hydrationAlerts}
-                onValueChange={setHydrationAlerts}
+                value={budgetCheckins}
+                onValueChange={setBudgetCheckins}
                 trackColor={{
                   false: isDark ? colors.gray[600] : colors.gray[500],
                   true: colors.primary,
@@ -377,22 +279,22 @@ const SettingsScreen = () => {
               style={[styles.divider, { backgroundColor: themedColors.border }]}
             />
 
-            {/* Weekly Digest */}
+            {/* Weekly Report */}
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
-                <Text style={styles.settingEmoji}>📰</Text>
+                <Text style={styles.settingEmoji}>📊</Text>
                 <Text
                   style={[
                     styles.settingTitle,
                     { color: themedColors.textPrimary },
                   ]}
                 >
-                  Weekly Digest
+                  Weekly Report
                 </Text>
               </View>
               <Switch
-                value={weeklyDigest}
-                onValueChange={setWeeklyDigest}
+                value={weeklyReport}
+                onValueChange={setWeeklyReport}
                 trackColor={{
                   false: isDark ? colors.gray[600] : colors.gray[500],
                   true: colors.primary,
@@ -443,30 +345,6 @@ const SettingsScreen = () => {
               style={[styles.divider, { backgroundColor: themedColors.border }]}
             />
 
-            {/* Export Data */}
-            <TouchableOpacity style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Text style={styles.settingEmoji}>💾</Text>
-                <Text
-                  style={[
-                    styles.settingTitle,
-                    { color: themedColors.textPrimary },
-                  ]}
-                >
-                  Export My Data
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={themedColors.textSecondary}
-              />
-            </TouchableOpacity>
-
-            <View
-              style={[styles.divider, { backgroundColor: themedColors.border }]}
-            />
-
             {/* Log Out */}
             <TouchableOpacity
               style={[styles.settingRow, styles.logoutRow]}
@@ -485,9 +363,9 @@ const SettingsScreen = () => {
           <View
             style={[styles.appIcon, { backgroundColor: themedColors.surface }]}
           >
-            <Ionicons name="leaf" size={24} color="#FFFFFF" />
+            <Ionicons name="wallet" size={24} color="#FFFFFF" />
           </View>
-          <Text style={styles.versionText}>AI Diet Consultant v1.0.2</Text>
+          <Text style={styles.versionText}>AI Financial Coach v2.0.0</Text>
         </View>
 
         <View style={{ height: 40 }} />
@@ -497,10 +375,6 @@ const SettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.backgroundDark,
-  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -508,9 +382,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
-    backgroundColor: colors.backgroundDark,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.05)",
   },
   headerButton: {
     width: 40,
@@ -522,7 +394,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: colors.textPrimaryDark,
     fontFamily: typography.fontFamily.display,
   },
   scrollView: {
@@ -531,11 +402,11 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: spacing.md,
     marginBottom: spacing.screenPadding,
+    marginTop: spacing.md,
   },
   sectionLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: colors.textSecondaryDark,
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
     paddingLeft: 4,
@@ -545,7 +416,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    backgroundColor: colors.surfaceDark,
     padding: spacing.md,
     borderRadius: radius["2xl"],
     borderWidth: 1,
@@ -560,19 +430,6 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
   },
-  verifiedBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.surfaceDark,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   profileInfo: {
     flex: 1,
     justifyContent: "center",
@@ -585,31 +442,10 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 18,
     fontWeight: "700",
-    color: colors.textPrimaryDark,
     fontFamily: typography.fontFamily.display,
-  },
-  proBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(255, 183, 77, 0.2)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-  },
-  proText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#FFB74D",
-    fontFamily: typography.fontFamily.display,
-  },
-  proStar: {
-    fontSize: 10,
-    fontFamily: typography.fontFamily.body,
   },
   profileEmail: {
     fontSize: 14,
-    color: colors.textSecondaryDark,
     marginTop: 2,
     fontFamily: typography.fontFamily.body,
   },
@@ -617,7 +453,6 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   settingsGroup: {
-    backgroundColor: colors.surfaceDark,
     borderRadius: radius["2xl"],
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.05)",
@@ -645,12 +480,10 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontWeight: "500",
-    color: colors.textPrimaryDark,
     fontFamily: typography.fontFamily.body,
   },
   settingSubtitle: {
     fontSize: 12,
-    color: colors.textSecondaryDark,
     marginTop: 2,
     fontFamily: typography.fontFamily.body,
   },
@@ -661,40 +494,11 @@ const styles = StyleSheet.create({
   },
   settingValue: {
     fontSize: 14,
-    color: colors.textSecondaryDark,
     fontFamily: typography.fontFamily.body,
   },
   divider: {
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
     marginLeft: spacing.md,
-  },
-  segmentedControl: {
-    flexDirection: "row",
-    backgroundColor: colors.surfaceDarkLight,
-    borderRadius: radius.lg,
-    padding: 4,
-    gap: 4,
-  },
-  segmentButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    minWidth: 86,
-    alignItems: "center",
-  },
-  segmentButtonActive: {
-    backgroundColor: colors.backgroundDark,
-    ...shadows.sm,
-  },
-  segmentText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.textSecondaryDark,
-    fontFamily: typography.fontFamily.display,
-  },
-  segmentTextActive: {
-    color: colors.primary,
   },
   logoutRow: {
     backgroundColor: "transparent",
@@ -716,7 +520,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radius.xl,
-    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     ...shadows.lg,

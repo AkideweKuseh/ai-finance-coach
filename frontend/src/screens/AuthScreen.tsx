@@ -54,7 +54,7 @@ const AuthScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>AI Diet Consultant</Text>
+      <Text style={styles.title}>AI Financial Coach</Text>
       <Text style={styles.subtitle}>{isLogin ? "Login" : "Register"}</Text>
 
       <TextInput

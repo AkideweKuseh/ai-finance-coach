@@ -6,7 +6,7 @@ import { Router } from "express";
 import {
   getProfile,
   updateProfile,
-  getDailySummary,
+  getSpendingSummary, // Changed getDailySummary
   deleteAccount,
 } from "../controllers/user.controller";
 import { authenticate } from "../middleware/auth.middleware";
@@ -29,11 +29,14 @@ router.get("/profile", getProfile);
 router.put("/profile", updateProfile);
 
 /**
- * GET /api/user/daily-summary
- * Get daily calorie and macro summary
+ * GET /api/user/spending-summary
+ * Get daily spending summary
  * Optional query param: ?date=2024-01-05
  */
-router.get("/daily-summary", getDailySummary);
+router.get("/spending-summary", getSpendingSummary);
+
+// Legacy route support (optional) - redirect or alias if needed
+// router.get("/daily-summary", getSpendingSummary);
 
 /**
  * DELETE /api/user/account

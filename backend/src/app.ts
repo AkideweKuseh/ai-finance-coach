@@ -16,7 +16,7 @@ import { errorHandler, notFound } from "./middleware/error.middleware";
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
 import chatRoutes from "./routes/chat.routes";
-import mealRoutes from "./routes/meal.routes";
+import transactionRoutes from "./routes/transaction.routes";
 
 /**
  * Create Express application
@@ -69,7 +69,7 @@ export const createApp = (): Application => {
   app.use("/api/auth", authRoutes);
   app.use("/api/user", userRoutes);
   app.use("/api/chat", chatRoutes);
-  app.use("/api/meals", mealRoutes);
+  app.use("/api/transactions", transactionRoutes);
 
   // 404 handler
   app.use(notFound);

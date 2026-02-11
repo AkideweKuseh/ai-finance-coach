@@ -109,15 +109,12 @@ Please try again in a moment. If the problem persists, contact support.`,
     return `
 User: ${user.name}
 Age: ${profile.age}
-Goal: ${profile.goal}
-Activity Level: ${profile.activityLevel}
-Daily Calorie Target: ${profile.dailyCalorieGoal} kcal
-Macro Goals: ${profile.macroGoals.protein}g protein, ${
-      profile.macroGoals.carbs
-    }g carbs, ${profile.macroGoals.fat}g fat
-Dietary Preferences: ${profile.dietaryPreferences.join(", ") || "None"}
+Monthly Income: ${profile.monthlyIncome}
+Risk Tolerance: ${profile.riskTolerance}
+Primary Goal: ${profile.primaryGoal}
+Spending Categories: ${profile.spendingCategories.join(", ") || "None"}
 
-Provide personalized advice based on this context.
+Provide personalized advice based on this financial context.
 `.trim();
   }
 }
