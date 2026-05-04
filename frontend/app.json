@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "AI Diet Consultant",
-    "slug": "ai-diet-consultant",
+    "name": "AI Finance Coach",
+    "slug": "ai-finance-coach",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,26 +9,26 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2f7f34"
+      "backgroundColor": "#2D9CDB"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aidietconsultant.app"
+      "bundleIdentifier": "com.aifinancecoach.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2f7f34"
+        "backgroundColor": "#2D9CDB"
       },
-      "package": "com.aidietconsultant.app",
+      "package": "com.aifinancecoach.app",
       "permissions": ["CAMERA"],
       "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-secure-store"],
+    "plugins": ["expo-secure-store", "expo-image-picker"],
     "extra": {
       "eas": {
         "projectId": "your-project-id"
