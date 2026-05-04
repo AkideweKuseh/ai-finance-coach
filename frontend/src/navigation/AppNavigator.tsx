@@ -13,14 +13,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, useThemedColors } from "../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Import screens
+// Screens
 import AuthNavigator from "./AuthNavigator";
 import DashboardScreen from "../screens/DashboardScreen";
-import AIChatScreen from "../screens/AIChatScreen";
+import ChatHistoryScreen from "../screens/ChatHistoryScreen";
+import ChatInterfaceScreen from "../screens/ChatInterfaceScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import TransactionDetailScreen from "../screens/TransactionDetailScreen";
 import LogTransactionScreen from "../screens/LogTransactionScreen";
+import AllTransactionsScreen from "../screens/AllTransactionsScreen";
+import ScanReceiptScreen from "../screens/ScanReceiptScreen";
 
 import { RootStackParamList, MainTabParamList } from "./types";
 import { useAuthStore } from "../stores/authStore";
@@ -28,16 +31,13 @@ import { useAuthStore } from "../stores/authStore";
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
 
-/**
- * Main Tab Navigator (for authenticated users)
- */
 const MainTabNavigator = () => {
   const themedColors = useThemedColors();
   const insets = useSafeAreaInsets();
   const androidBottomInset = Platform.OS === "android" ? insets.bottom : 0;
   const tabBarBaseHeight = 68;
-  const tabBarPaddingBottom = 12 + androidBottomInset;
   const tabBarHeight = tabBarBaseHeight + androidBottomInset;
+
   return (
     <MainTab.Navigator
       screenOptions={{
@@ -48,37 +48,29 @@ const MainTabNavigator = () => {
           backgroundColor: themedColors.surface,
           borderTopColor: themedColors.border,
           borderTopWidth: 1,
-          paddingBottom: tabBarPaddingBottom,
+          paddingBottom: 12 + androidBottomInset,
           paddingTop: 10,
           height: tabBarHeight,
           elevation: 0,
           shadowOpacity: 0,
           position: "absolute",
         },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-          marginTop: 2,
-        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600", marginTop: 2 },
       }}
     >
       <MainTab.Screen
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
           tabBarLabel: "Home",
         }}
       />
       <MainTab.Screen
-        name="AIChat"
-        component={AIChatScreen}
+        name="ChatHistory"
+        component={ChatHistoryScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubbles" size={size} color={color} />,
           tabBarLabel: "Coach",
         }}
       />
@@ -86,9 +78,7 @@ const MainTabNavigator = () => {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
           tabBarLabel: "Profile",
         }}
       />
@@ -96,9 +86,7 @@ const MainTabNavigator = () => {
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="settings" size={size} color={color} />,
           tabBarLabel: "Settings",
         }}
       />
@@ -106,15 +94,10 @@ const MainTabNavigator = () => {
   );
 };
 
-/**
- * Root Navigator (handles auth state)
- */
 const RootNavigator = () => {
   const { isAuthenticated, isLoading } = useAuthStore();
 
-  if (isLoading) {
-    return null; // Could show splash screen here
-  }
+  if (isLoading) return null;
 
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
@@ -122,11 +105,18 @@ const RootNavigator = () => {
         <>
           <RootStack.Screen name="Main" component={MainTabNavigator} />
           <RootStack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
-          <RootStack.Screen 
-            name="LogTransaction" 
-            component={LogTransactionScreen} 
-            options={{ presentation: 'modal' }}
+          <RootStack.Screen
+            name="LogTransaction"
+            component={LogTransactionScreen}
+            options={{ presentation: "modal" }}
           />
+          <RootStack.Screen name="AllTransactions" component={AllTransactionsScreen} />
+          <RootStack.Screen
+            name="ScanReceipt"
+            component={ScanReceiptScreen}
+            options={{ presentation: "modal" }}
+          />
+          <RootStack.Screen name="ChatInterface" component={ChatInterfaceScreen} />
         </>
       ) : (
         <RootStack.Screen name="Auth" component={AuthNavigator} />
@@ -135,15 +125,10 @@ const RootNavigator = () => {
   );
 };
 
-/**
- * App Navigator Component
- */
-const AppNavigator = () => {
-  return (
-    <NavigationContainer>
-      <RootNavigator />
-    </NavigationContainer>
-  );
-};
+const AppNavigator = () => (
+  <NavigationContainer>
+    <RootNavigator />
+  </NavigationContainer>
+);
 
 export default AppNavigator;

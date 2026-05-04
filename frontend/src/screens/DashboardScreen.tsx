@@ -285,10 +285,10 @@ const DashboardScreen = () => {
               isPrimary
               onPress={() => navigation.navigate("LogTransaction")}
             />
-            <QuickAction 
-                icon="chatbubbles" 
-                label="Coach" 
-                onPress={() => navigation.navigate("AIChat")}
+            <QuickAction
+                icon="chatbubbles"
+                label="Coach"
+                onPress={() => navigation.navigate("ChatHistory")}
             />
             <QuickAction icon="scan" label="Scan Receipt" onPress={() => navigation.navigate("ScanReceipt")} />
           </View>
