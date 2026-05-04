@@ -3,7 +3,7 @@
  * User financial profile with details, goals, and risk tolerance
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -23,6 +24,7 @@ import {
 } from "../theme";
 import { ScreenContainer } from "../components/common/ScreenContainer";
 import { useUserStore } from "../stores/userStore";
+import * as userApi from "../api/user";
 
 type FinancialGoal = "save_emergency" | "pay_debt" | "invest" | "budget_control";
 type RiskTolerance = "conservative" | "moderate" | "aggressive";
@@ -33,6 +35,7 @@ const ProfileScreen = () => {
   const [selectedGoal, setSelectedGoal] = useState<FinancialGoal>("save_emergency");
   const [riskTolerance, setRiskTolerance] = useState<RiskTolerance>("moderate");
   const [spendingCategories, setSpendingCategories] = useState<string[]>([]);
+  const categoryDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Update local state when user loads
   useEffect(() => {
@@ -43,25 +46,51 @@ const ProfileScreen = () => {
   }, [user]);
 
   // Handle updates
-  const handleGoalChange = (goal: FinancialGoal) => {
-      setSelectedGoal(goal);
-      updateProfile({ primaryGoal: goal });
+  const handleGoalChange = async (goal: FinancialGoal) => {
+    setSelectedGoal(goal);
+    updateProfile({ primaryGoal: goal });
+    try {
+      await userApi.updateProfile({ profile: { primaryGoal: goal } });
+    } catch {
+      setSelectedGoal(user?.profile?.primaryGoal ?? "save_emergency");
+      updateProfile({ primaryGoal: user?.profile?.primaryGoal ?? "save_emergency" });
+      Alert.alert("Error", "Failed to save goal. Please try again.");
+    }
   };
 
-  const handleRiskChange = (risk: RiskTolerance) => {
-      setRiskTolerance(risk);
-      updateProfile({ riskTolerance: risk });
+  const handleRiskChange = async (risk: RiskTolerance) => {
+    setRiskTolerance(risk);
+    updateProfile({ riskTolerance: risk });
+    try {
+      await userApi.updateProfile({ profile: { riskTolerance: risk } });
+    } catch {
+      setRiskTolerance(user?.profile?.riskTolerance ?? "moderate");
+      updateProfile({ riskTolerance: user?.profile?.riskTolerance ?? "moderate" });
+      Alert.alert("Error", "Failed to save risk tolerance. Please try again.");
+    }
   };
-  
+
   const toggleCategory = (cat: string) => {
-      let newCats;
-      if (spendingCategories.includes(cat)) {
-          newCats = spendingCategories.filter(c => c !== cat);
-      } else {
-          newCats = [...spendingCategories, cat];
+    let newCats: string[];
+    if (spendingCategories.includes(cat)) {
+      newCats = spendingCategories.filter((c) => c !== cat);
+    } else {
+      newCats = [...spendingCategories, cat];
+    }
+    setSpendingCategories(newCats);
+    updateProfile({ spendingCategories: newCats });
+
+    if (categoryDebounce.current) clearTimeout(categoryDebounce.current);
+    categoryDebounce.current = setTimeout(async () => {
+      try {
+        await userApi.updateProfile({ profile: { spendingCategories: newCats } });
+      } catch {
+        const original = user?.profile?.spendingCategories ?? [];
+        setSpendingCategories(original);
+        updateProfile({ spendingCategories: original });
+        Alert.alert("Error", "Failed to save categories. Please try again.");
       }
-      setSpendingCategories(newCats);
-      updateProfile({ spendingCategories: newCats });
+    }, 500);
   };
 
   const memberSinceLabel = useMemo(() => {
