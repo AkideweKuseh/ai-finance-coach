@@ -28,6 +28,7 @@ import Svg, { Circle } from "react-native-svg";
 import { ScreenContainer } from "../components/common/ScreenContainer";
 import { useUserStore } from "../stores/userStore";
 import { useTransactionStore } from "../stores/transactionStore";
+import * as userApi from "../api/user";
 
 interface QuickActionProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -113,14 +114,26 @@ const DashboardScreen = () => {
   const { transactions, fetchTransactions, isLoading: isTransLoading } = useTransactionStore();
 
   useEffect(() => {
-    fetchTransactions();
-    // Assuming user store fetches summary on its own or we trigger it
-    // useUserStore.getState().getSpendingSummary?.(); 
+    const load = async () => {
+      fetchTransactions();
+      try {
+        const summary = await userApi.getSpendingSummary();
+        useUserStore.getState().setSpendingSummary(summary);
+      } catch {
+        // silent — dashboard shows defaults
+      }
+    };
+    load();
   }, []);
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     fetchTransactions();
-    // Refresh summary too
+    try {
+      const summary = await userApi.getSpendingSummary();
+      useUserStore.getState().setSpendingSummary(summary);
+    } catch {
+      // silent
+    }
   }, []);
 
   const firstName = user?.name?.split(" ")?.[0] || "Friend";
@@ -277,7 +290,7 @@ const DashboardScreen = () => {
                 label="Coach" 
                 onPress={() => navigation.navigate("AIChat")}
             />
-            <QuickAction icon="scan" label="Scan Receipt" />
+            <QuickAction icon="scan" label="Scan Receipt" onPress={() => navigation.navigate("ScanReceipt")} />
           </View>
         </View>
 
@@ -289,7 +302,7 @@ const DashboardScreen = () => {
             >
               Recent Transactions
             </Text>
-            <TouchableOpacity onPress={() => navigation.navigate("TransactionDetail", { transactionId: "all" })}>
+            <TouchableOpacity onPress={() => navigation.navigate("AllTransactions")}>
               <Text style={styles.seeAllButton}>See All</Text>
             </TouchableOpacity>
           </View>
