@@ -7,6 +7,7 @@ import {
   SendMessageData,
   SendMessageResponse,
   ChatConversation,
+  ConversationSummary,
 } from "../types/chat";
 
 type ApiResponse<T> = {
@@ -16,66 +17,53 @@ type ApiResponse<T> = {
   errors?: unknown;
 };
 
-/**
- * Send message to AI consultant
- */
-export const sendMessage = async (
-  data: SendMessageData
-): Promise<SendMessageResponse> => {
+export const listConversations = async (): Promise<ConversationSummary[]> => {
   try {
-    const response = await apiClient.post<ApiResponse<SendMessageResponse>>(
-      "/chat/message",
-      data
-    );
+    const response = await apiClient.get<ApiResponse<ConversationSummary[]>>("/chat/conversations");
+    return response.data.data ?? [];
+  } catch (error) {
+    throw new Error(handleApiError(error));
+  }
+};
 
-    if (!response.data?.data) {
-      throw new Error(response.data?.message || "Invalid server response");
-    }
-
+export const createConversation = async (): Promise<{ _id: string; title: string }> => {
+  try {
+    const response = await apiClient.post<ApiResponse<{ _id: string; title: string }>>("/chat/conversations");
+    if (!response.data?.data) throw new Error("Invalid server response");
     return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }
 };
 
-/**
- * Get conversation history
- */
-export const getConversation = async (
-  conversationId?: string
-): Promise<ChatConversation> => {
+export const sendMessage = async (data: SendMessageData): Promise<SendMessageResponse> => {
   try {
-    const endpoint = conversationId
-      ? `/chat/conversation/${conversationId}`
-      : "/chat/conversation";
+    const response = await apiClient.post<ApiResponse<SendMessageResponse>>("/chat/message", data);
+    if (!response.data?.data) throw new Error(response.data?.message || "Invalid server response");
+    return response.data.data;
+  } catch (error) {
+    throw new Error(handleApiError(error));
+  }
+};
 
+export const getConversation = async (conversationId: string): Promise<ChatConversation> => {
+  try {
     const response = await apiClient.get<ApiResponse<ChatConversation>>(
-      endpoint
+      `/chat/conversation/${conversationId}`
     );
-
-    if (!response.data?.data) {
-      throw new Error(response.data?.message || "Invalid server response");
-    }
-
+    if (!response.data?.data) throw new Error(response.data?.message || "Invalid server response");
     return response.data.data;
   } catch (error) {
     throw new Error(handleApiError(error));
   }
 };
 
-/**
- * Clear conversation history
- */
-export const clearConversation = async (): Promise<void> => {
+export const clearConversation = async (conversationId: string): Promise<void> => {
   try {
-    await apiClient.delete("/chat/conversation");
+    await apiClient.delete(`/chat/conversation/${conversationId}`);
   } catch (error) {
     throw new Error(handleApiError(error));
   }
 };
 
-export default {
-  sendMessage,
-  getConversation,
-  clearConversation,
-};
+export default { listConversations, createConversation, sendMessage, getConversation, clearConversation };
