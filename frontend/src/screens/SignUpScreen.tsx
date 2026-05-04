@@ -30,6 +30,7 @@ const SignUpScreen = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [age, setAge] = useState("");
   const [income, setIncome] = useState("");
   const [goal, setGoal] = useState<FinancialGoal>("save_emergency");
   const [risk, setRisk] = useState<RiskTolerance>("moderate");
@@ -55,11 +56,11 @@ const SignUpScreen = () => {
         email,
         password,
         profile: {
+            age: age ? parseInt(age, 10) : undefined,
             monthlyIncome: income ? parseFloat(income) : 0,
             primaryGoal: goal,
             riskTolerance: risk,
-            currency: "USD",
-            spendingCategories: []
+            spendingCategories: [],
         },
       });
 
@@ -141,6 +142,13 @@ const SignUpScreen = () => {
             />
             
             <Text style={styles.label}>Financial Profile</Text>
+            <Input
+              placeholder="Your Age"
+              value={age}
+              onChangeText={setAge}
+              keyboardType="numeric"
+              containerStyle={styles.inputContainer}
+            />
             <Input
               placeholder="Monthly Income (approx)"
               value={income}
