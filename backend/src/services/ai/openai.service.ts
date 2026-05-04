@@ -1,16 +1,9 @@
 /**
  * OpenAI Service Implementation
- *
- * Implements the AI provider interface for OpenAI's GPT models
  */
 
 import OpenAI from "openai";
-import {
-  IAIProvider,
-  AIMessage,
-  AIResponse,
-  AIConfig,
-} from "./provider.interface";
+import { IAIProvider, AIMessage, AIResponse, AIConfig } from "./provider.interface";
 
 export class OpenAIService implements IAIProvider {
   private client: OpenAI;
@@ -18,42 +11,46 @@ export class OpenAIService implements IAIProvider {
 
   constructor(config: AIConfig) {
     this.config = config;
-    this.client = new OpenAI({
-      apiKey: config.apiKey,
-    });
+    this.client = new OpenAI({ apiKey: config.apiKey });
   }
 
-  /**
-   * Send chat completion request to OpenAI
-   */
-  async chat(messages: AIMessage[], userContext?: string): Promise<AIResponse> {
+  async chat(
+    messages: AIMessage[],
+    userContext?: string,
+    imageBase64?: string,
+    imageMimeType?: string
+  ): Promise<AIResponse> {
     try {
       // Add system message with financial coach context
-      const systemMessage: AIMessage = {
-        role: "system",
-        content: this.getSystemPrompt(userContext),
-      };
+      const systemMessage = { role: "system" as const, content: this.getSystemPrompt(userContext) };
 
-      // Combine system message with conversation
-      const allMessages = [systemMessage, ...messages];
+      const formattedMessages = messages.map((msg, index) => {
+        const isLastUserMessage = index === messages.length - 1 && msg.role === "user";
+        if (isLastUserMessage && imageBase64 && imageMimeType) {
+          return {
+            role: "user" as const,
+            content: [
+              { type: "text" as const, text: msg.content },
+              {
+                type: "image_url" as const,
+                image_url: { url: `data:${imageMimeType};base64,${imageBase64}` },
+              },
+            ],
+          };
+        }
+        return { role: msg.role as "user" | "assistant", content: msg.content };
+      });
 
-      // Call OpenAI API
       const response = await this.client.chat.completions.create({
         model: this.config.model,
-        messages: allMessages.map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        })),
+        messages: [systemMessage, ...formattedMessages] as any,
         temperature: this.config.temperature || 0.7,
         max_tokens: this.config.maxTokens || 1000,
       });
 
       const completion = response.choices[0];
-
       return {
-        content:
-          completion.message.content ||
-          "I apologize, I could not generate a response.",
+        content: completion.message.content || "I apologize, I could not generate a response.",
         finishReason: completion.finish_reason,
         tokensUsed: response.usage?.total_tokens,
       };
@@ -83,32 +80,17 @@ IMPORTANT SAFETY RULES:
 - DO NOT diagnose financial trauma or mental health conditions
 - DIRECT users to certified financial planners for complex investing
 - DIRECT users to tax professionals for tax questions
-- Provide general strategies for debt reduction and budgeting frameworks (50/30/20, etc.)
 
 Mandatory Disclosures:
 - If asked for investment advice: "I can help you understand general investing principles, but for specific recommendations, consult a certified financial advisor."
 - If asked for tax advice: "Tax laws vary by location. Please consult a CPA or tax professional."`;
 
-    if (userContext) {
-      prompt += `\n\nUSER PROFILE CONTEXT:\n${userContext}`;
-    }
-
+    if (userContext) prompt += `\n\nUSER PROFILE CONTEXT:\n${userContext}`;
     return prompt;
   }
 
-  /**
-   * Get provider name
-   */
-  getProviderName(): string {
-    return "OpenAI";
-  }
-
-  /**
-   * Check if configured
-   */
-  isConfigured(): boolean {
-    return !!this.config.apiKey && !!this.config.model;
-  }
+  getProviderName(): string { return "OpenAI"; }
+  isConfigured(): boolean { return !!this.config.apiKey && !!this.config.model; }
 }
 
 export default OpenAIService;

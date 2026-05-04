@@ -64,13 +64,18 @@ class AIService {
    * @param userContext - Optional user profile context
    * @returns AI response
    */
-  async chat(messages: AIMessage[], userContext?: string): Promise<AIResponse> {
+  async chat(
+    messages: AIMessage[],
+    userContext?: string,
+    imageBase64?: string,
+    imageMimeType?: string
+  ): Promise<AIResponse> {
     try {
       if (!this.provider.isConfigured()) {
         throw new Error("AI provider is not properly configured");
       }
 
-      const response = await this.provider.chat(messages, userContext);
+      const response = await this.provider.chat(messages, userContext, imageBase64, imageMimeType);
       return response;
     } catch (error: any) {
       console.error("AI Service error:", error.message);
