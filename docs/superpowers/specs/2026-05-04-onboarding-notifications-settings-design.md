@@ -24,11 +24,13 @@ Full-screen dark background matching the app theme. Chat-bubble layout: coach me
 ### Question Sequence
 | # | Coach message | Input type |
 |---|---|---|
-| 1 | "Hi [name]! I'm your AI Finance Coach. Let's set up your profile. What's your monthly income?" | Numeric TextInput + "Next" button |
-| 2 | "Got it. How old are you?" | Numeric TextInput + "Next" |
-| 3 | "What's your main financial goal right now?" | 4 tap-chips: Emergency Fund / Pay Off Debt / Invest / Budget Control |
-| 4 | "How do you feel about financial risk?" | 3 tap-chips: Conservative / Moderate / Aggressive |
-| 5 | "Which categories do you usually spend on?" | Multi-select chips: Food / Transport / Health / Shopping / Bills / Fun |
+| 1 | "Hi [name]! I'm your AI Finance Coach. First — what currency do you use?" | Searchable modal picker (all ISO 4217 currencies via `currency-codes` package). Stores code + symbol in `userPrefs.currency`. |
+| 2 | "Great! What's your monthly income?" | Numeric TextInput prefixed with selected currency symbol + "Next" button |
+| 3 | "How much do you want to save each month?" | Numeric TextInput prefixed with currency symbol. Stored as `profile.monthlySavingsTarget`. Used instead of hardcoded 20% in the projection chart. |
+| 4 | "How old are you?" | Numeric TextInput + "Next" |
+| 5 | "What's your main financial goal right now?" | 4 tap-chips: Emergency Fund / Pay Off Debt / Invest / Budget Control |
+| 6 | "How do you feel about financial risk?" | 3 tap-chips: Conservative / Moderate / Aggressive |
+| 7 | "Which categories do you usually spend on?" | Multi-select chips: Food / Transport / Health / Shopping / Bills / Fun |
 
 Name is already known from registration — used in the opening message.
 
@@ -37,8 +39,8 @@ After the final answer, the coach sends one more message: "Here's your personali
 
 **Savings Projection Chart**
 - Line chart (Victory Native or react-native-chart-kit) showing projected cumulative savings over 12 months
-- Assumption: user saves 20% of monthly income
-- X-axis: months (Jan–Dec), Y-axis: cumulative savings in $
+- Uses `profile.monthlySavingsTarget` entered in step 3 (no hardcoded percentage)
+- X-axis: months (Jan–Dec), Y-axis: cumulative savings prefixed with the user's currency symbol
 - Accent color line, subtle fill below
 
 **3 Stat Cards** (horizontal row below chart):
@@ -53,6 +55,7 @@ After the final answer, the coach sends one more message: "Here's your personali
 
 ### Backend
 - Add `hasCompletedOnboarding: { type: Boolean, default: false }` to UserSchema
+- Add `profile.monthlySavingsTarget: { type: Number, default: 0, min: 0 }` to UserProfileSchema
 - `updateProfile` already handles partial updates via `findByIdAndUpdate` — no new endpoint needed
 
 ---
@@ -67,14 +70,17 @@ userPrefs: {
   spendingAlerts: { type: Boolean, default: true },
   weeklyReport:   { type: Boolean, default: true },
   checkIn:        { type: Boolean, default: true },
-  currency:       { type: String,  default: 'USD' },
+  currency:       { type: String,  default: 'USD' },  // ISO 4217 code
 }
-pushToken:    { type: String, default: null }
+pushToken:              { type: String,  default: null }
 hasCompletedOnboarding: { type: Boolean, default: false }
 notifiedToday: {
   alert80:  { type: Date, default: null },
   alert100: { type: Date, default: null },
 }
+
+// Added to UserProfileSchema
+monthlySavingsTarget: { type: Number, default: 0, min: 0 }
 ```
 
 ### New Model: WeeklyReport
@@ -174,7 +180,7 @@ On Settings screen mount: read toggle state from `useUserStore().user.userPrefs`
 
 ### Currency Picker
 
-A row in the Settings screen opens a simple modal with a list of currencies (USD, GBP, EUR, GHS, NGN, KES, ZAR — expandable). Selecting one calls `updateProfile({ userPrefs: { currency: 'GBP' } })`. All monetary displays across the app read `user.userPrefs.currency` from the store and prepend the matching symbol (e.g. £, €, ₵). No FX conversion — amounts stay as entered, only the symbol changes.
+A row in the Settings screen opens a searchable modal using the `currency-codes` npm package (all ISO 4217 currencies — same component reused from onboarding). Selecting one calls `updateProfile({ userPrefs: { currency: 'GBP' } })`. All monetary displays across the app read `user.userPrefs.currency` from the store and prepend the matching symbol (e.g. £, €, ₵) derived from the `currency-codes` package. No FX conversion — amounts stay as entered, only the symbol changes.
 
 ---
 
@@ -196,6 +202,7 @@ New type entries in `navigation/types.ts`:
 - `expo-print` (PDF generation)
 - `expo-sharing` (share/save PDF)
 - `victory-native` or `react-native-chart-kit` (savings line chart in onboarding)
+- `currency-codes` (full ISO 4217 currency list with codes, names, and symbols — used in onboarding picker and Settings currency selector)
 
 **Backend:**
 - `node-cron` (weekly report + check-in jobs)
