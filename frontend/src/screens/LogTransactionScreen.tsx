@@ -14,7 +14,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   colors,
   spacing,
@@ -29,11 +29,13 @@ import { Button } from "../components/common/Button";
 
 const LogTransactionScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const themedColors = useThemedColors();
   const { addTransaction } = useTransactionStore();
-  
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
+  const prefill = route.params?.prefill;
+
+  const [amount, setAmount] = useState(prefill?.amount?.toString() ?? "");
+  const [description, setDescription] = useState(prefill?.description ?? "");
   const [category, setCategory] = useState("Food");
   const [mood, setMood] = useState("neutral");
   const [trigger, setTrigger] = useState("");
