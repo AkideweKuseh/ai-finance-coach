@@ -6,7 +6,7 @@
 
 import { Response } from "express";
 import { User } from "../models/User.model";
-import { Transaction } from "../models/Transaction.model"; // Changed MealLog to Transaction
+import { Transaction } from "../models/Transaction.model";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { AppError, catchAsync } from "../middleware/error.middleware";
 
@@ -139,7 +139,7 @@ export const deleteAccount = catchAsync(
     const userId = req.user?.userId;
 
     await User.findByIdAndDelete(userId);
-    await Transaction.deleteMany({ userId }); // Changed MealLog to Transaction
+    await Transaction.deleteMany({ userId });
 
     res.status(200).json({
       success: true,

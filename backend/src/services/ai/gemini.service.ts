@@ -60,7 +60,7 @@ export class GeminiService implements IAIProvider {
   }
 
   /**
-   * Get system prompt for nutrition expert
+   * Get system prompt for financial coach
    */
   private getSystemPrompt(userContext?: string): string {
     let prompt = `You are a compassionate financial behavioral coach specializing in spending psychology. Your role is to:

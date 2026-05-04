@@ -23,7 +23,7 @@ const startServer = async () => {
     const server = app.listen(config.port, "0.0.0.0", () => {
       console.log("");
       console.log("=".repeat(60));
-      console.log("🚀 AI Diet Consultant Backend Server");
+      console.log("🚀 AI Finance Coach Backend Server");
       console.log("=".repeat(60));
       console.log(`📍 Server running on: http://localhost:${config.port}`);
       console.log(`📱 Network access: http://192.168.1.224:${config.port}`);
@@ -37,7 +37,7 @@ const startServer = async () => {
       console.log(`  Auth:   http://localhost:${config.port}/api/auth`);
       console.log(`  User:   http://localhost:${config.port}/api/user`);
       console.log(`  Chat:   http://localhost:${config.port}/api/chat`);
-      console.log(`  Meals:  http://localhost:${config.port}/api/meals`);
+      console.log(`  Transactions: http://localhost:${config.port}/api/transactions`);
       console.log("");
       console.log("Press Ctrl+C to stop the server");
       console.log("=".repeat(60));

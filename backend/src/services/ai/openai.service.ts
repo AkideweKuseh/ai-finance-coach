@@ -28,7 +28,7 @@ export class OpenAIService implements IAIProvider {
    */
   async chat(messages: AIMessage[], userContext?: string): Promise<AIResponse> {
     try {
-      // Add system message with nutrition expert context
+      // Add system message with financial coach context
       const systemMessage: AIMessage = {
         role: "system",
         content: this.getSystemPrompt(userContext),
@@ -64,7 +64,7 @@ export class OpenAIService implements IAIProvider {
   }
 
   /**
-   * Get system prompt for nutrition expert
+   * Get system prompt for financial coach
    */
   private getSystemPrompt(userContext?: string): string {
     let prompt = `You are a compassionate financial behavioral coach specializing in spending psychology. Your role is to:

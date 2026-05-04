@@ -100,9 +100,6 @@ export const deleteTransaction = catchAsync(async (req: AuthRequest, res: Respon
   });
 });
 
-// Removed getMealSuggestions as it's not directly applicable. 
-// Future: Implement getFinancialTips or similar if needed.
-
 export default {
     getTransactions,
     logTransaction,
