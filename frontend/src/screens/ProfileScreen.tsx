@@ -27,6 +27,10 @@ import {
 import { ScreenContainer } from "../components/common/ScreenContainer";
 import { useUserStore } from "../stores/userStore";
 import * as userApi from "../api/user";
+import { useNavigation } from "@react-navigation/native";
+import * as reportsApi from "../api/reports";
+import { WeeklyReportSummary } from "../types/report";
+import { getCurrencySymbol } from "../utils/currency";
 
 type FinancialGoal = "save_emergency" | "pay_debt" | "invest" | "budget_control";
 type RiskTolerance = "conservative" | "moderate" | "aggressive";
@@ -42,6 +46,15 @@ const ProfileScreen = () => {
   const [riskTolerance, setRiskTolerance] = useState<RiskTolerance>("moderate");
   const [spendingCategories, setSpendingCategories] = useState<string[]>([]);
   const categoryDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const navigation = useNavigation<any>();
+  const [reports, setReports] = useState<WeeklyReportSummary[]>([]);
+
+  useEffect(() => {
+    reportsApi.getReports().then(setReports).catch(() => {});
+  }, []);
+
+  const symbol = getCurrencySymbol(user?.userPrefs?.currency ?? "USD");
 
   // Update local state when user loads
   useEffect(() => {
@@ -493,6 +506,51 @@ const ProfileScreen = () => {
           </View>
         </View>
 
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: themedColors.textPrimary }]}>
+            Past Reports
+          </Text>
+          {reports.length === 0 ? (
+            <Text style={{ color: themedColors.textSecondary, fontSize: 14, paddingLeft: 4 }}>
+              Your weekly reports will appear here.
+            </Text>
+          ) : (
+            <View style={[{ backgroundColor: themedColors.surface, borderRadius: 16 }]}>
+              {reports.map((r, i) => {
+                const start = new Date(r.weekStart).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                });
+                const end = new Date(r.weekEnd).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                });
+                return (
+                  <TouchableOpacity
+                    key={r._id}
+                    style={[
+                      styles.reportRow,
+                      { borderBottomColor: themedColors.border },
+                      i === reports.length - 1 && { borderBottomWidth: 0 },
+                    ]}
+                    onPress={() => navigation.navigate("WeeklyReport", { reportId: r._id })}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.reportDate, { color: themedColors.textPrimary }]}>
+                        {start} – {end}
+                      </Text>
+                      <Text style={[styles.reportMeta, { color: themedColors.textSecondary }]}>
+                        {r.txCount} transactions · {symbol}{r.totalSpent.toFixed(2)} spent
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={themedColors.textSecondary} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
         <View style={{ height: 100 }} />
       </ScrollView>
     </ScreenContainer>
@@ -732,6 +790,23 @@ const styles = StyleSheet.create({
   },
   preferenceLabelActive: {
     color: "#FFFFFF",
+  },
+  reportRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  reportDate: {
+    fontSize: 14,
+    fontWeight: "700",
+    fontFamily: typography.fontFamily.display,
+    marginBottom: 2,
+  },
+  reportMeta: {
+    fontSize: 12,
+    fontFamily: typography.fontFamily.body,
   },
 });
 
