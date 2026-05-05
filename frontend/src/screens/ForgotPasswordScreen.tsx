@@ -4,9 +4,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Alert,
   TouchableOpacity,
 } from "react-native";
+import { useAlertStore } from "../stores/alertStore";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AuthStackParamList } from "../navigation/types";
@@ -24,6 +24,7 @@ type NavigationProp = NativeStackNavigationProp<
 const ForgotPasswordScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const themedColors = useThemedColors();
+  const { showAlert } = useAlertStore();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +38,7 @@ const ForgotPasswordScreen = () => {
     // Simulate sending email
     setTimeout(() => {
       setLoading(false);
-      Alert.alert(
+      showAlert(
         "Email Sent",
         "If an account exists with this email, you will receive a password reset link.",
         [{ text: "OK", onPress: () => navigation.goBack() }]

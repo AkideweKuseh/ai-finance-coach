@@ -11,8 +11,8 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
 } from "react-native";
+import { useAlertStore } from "../stores/alertStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import {
@@ -32,6 +32,7 @@ const LogTransactionScreen = () => {
   const route = useRoute<any>();
   const themedColors = useThemedColors();
   const { addTransaction } = useTransactionStore();
+  const { showAlert } = useAlertStore();
   const prefill = route.params?.prefill;
 
   const [amount, setAmount] = useState(prefill?.amount?.toString() ?? "");
@@ -47,7 +48,7 @@ const LogTransactionScreen = () => {
 
   const handleSave = async () => {
       if (!amount || !description) {
-          Alert.alert("Missing Info", "Please enter amount and description");
+          showAlert("Missing Info", "Please enter amount and description");
           return;
       }
       
@@ -63,7 +64,7 @@ const LogTransactionScreen = () => {
           });
           navigation.goBack();
       } catch (error: any) {
-          Alert.alert("Error", error.message);
+          showAlert("Error", error.message);
       } finally {
           setLoading(false);
       }

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import { useAlertStore } from "../stores/alertStore";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AuthStackParamList } from "../navigation/types";
@@ -24,10 +25,11 @@ const LoginScreen = () => {
 
   const { setTokens } = useAuthStore();
   const { setUser } = useUserStore();
+  const { showAlert } = useAlertStore();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Missing info", "Please enter your email and password.");
+      showAlert("Missing info", "Please enter your email and password.");
       return;
     }
     setLoading(true);
@@ -36,7 +38,7 @@ const LoginScreen = () => {
       setUser(user);
       await setTokens(accessToken, refreshToken);
     } catch (error: any) {
-      Alert.alert("Login failed", error?.message || "Please try again.");
+      showAlert("Login failed", error?.message || "Please try again.");
     } finally {
       setLoading(false);
     }

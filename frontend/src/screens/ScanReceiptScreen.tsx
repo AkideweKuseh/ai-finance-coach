@@ -11,8 +11,8 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from "react-native";
+import { useAlertStore } from "../stores/alertStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { colors, spacing, typography, radius, shadows, useThemedColors } from "../theme";
@@ -33,11 +33,12 @@ const parseReceipt = (text: string): { description: string; amount: number | nul
 const ScanReceiptScreen = () => {
   const themedColors = useThemedColors();
   const navigation = useNavigation<any>();
+  const { showAlert } = useAlertStore();
   const [receiptText, setReceiptText] = useState("");
 
   const handleParse = () => {
     if (!receiptText.trim()) {
-      Alert.alert("Empty", "Paste or type some receipt text first.");
+      showAlert("Empty", "Paste or type some receipt text first.");
       return;
     }
     const { description, amount } = parseReceipt(receiptText);

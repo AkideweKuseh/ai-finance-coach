@@ -5,9 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useAlertStore } from "../stores/alertStore";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AuthStackParamList } from "../navigation/types";
 import { colors, spacing, useThemedColors, typography, radius } from "../theme";
@@ -27,6 +27,7 @@ type RiskTolerance = "conservative" | "moderate" | "aggressive";
 const SignUpScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const themedColors = useThemedColors();
+  const { showAlert } = useAlertStore();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,7 +42,7 @@ const SignUpScreen = () => {
 
   const handleSignUp = async () => {
     if (!email || !password || !name) {
-      Alert.alert(
+      showAlert(
         "Missing info",
         "Please enter your name, email, and password."
       );
@@ -68,7 +69,7 @@ const SignUpScreen = () => {
       await setTokens(accessToken, refreshToken);
       // Navigation will happen automatically via AppNavigator when isAuthenticated becomes true
     } catch (error: any) {
-      Alert.alert("Sign up failed", error?.message || "Please try again.");
+      showAlert("Sign up failed", error?.message || "Please try again.");
     } finally {
       setLoading(false);
     }

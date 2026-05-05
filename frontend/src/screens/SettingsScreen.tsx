@@ -10,12 +10,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Switch,
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenContainer } from "../components/common/ScreenContainer";
+import { useAlertStore } from "../stores/alertStore";
 import {
   colors,
   spacing,
@@ -34,6 +34,7 @@ const SettingsScreen = () => {
   const { user, clearUser } = useUserStore();
   const { themeMode, isDark, setThemeMode } = useThemeStore();
   const themedColors = useThemedColors();
+  const { showAlert } = useAlertStore();
   
   const [spendingAlerts, setSpendingAlerts] = useState(true);
   const [budgetCheckins, setBudgetCheckins] = useState(false);
@@ -41,7 +42,7 @@ const SettingsScreen = () => {
   const [currency, setCurrency] = useState("USD");
 
   const handleLogout = async () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
+    showAlert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Logout",

@@ -11,8 +11,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
+import { useAlertStore } from "../stores/alertStore";
 import { Ionicons } from "@expo/vector-icons";
 import {
   colors,
@@ -31,8 +33,12 @@ type RiskTolerance = "conservative" | "moderate" | "aggressive";
 
 const ProfileScreen = () => {
   const themedColors = useThemedColors();
-  const { user, updateProfile } = useUserStore();
+  const { user, updateProfile, setUser, setSpendingSummary } = useUserStore();
+  const { showAlert } = useAlertStore();
   const [selectedGoal, setSelectedGoal] = useState<FinancialGoal>("save_emergency");
+  const [editingField, setEditingField] = useState<"name" | "income" | "age" | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [riskTolerance, setRiskTolerance] = useState<RiskTolerance>("moderate");
   const [spendingCategories, setSpendingCategories] = useState<string[]>([]);
   const categoryDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,7 +60,7 @@ const ProfileScreen = () => {
     } catch {
       setSelectedGoal(user?.profile?.primaryGoal ?? "save_emergency");
       updateProfile({ primaryGoal: user?.profile?.primaryGoal ?? "save_emergency" });
-      Alert.alert("Error", "Failed to save goal. Please try again.");
+      showAlert("Error", "Failed to save goal. Please try again.");
     }
   };
 
@@ -66,7 +72,7 @@ const ProfileScreen = () => {
     } catch {
       setRiskTolerance(user?.profile?.riskTolerance ?? "moderate");
       updateProfile({ riskTolerance: user?.profile?.riskTolerance ?? "moderate" });
-      Alert.alert("Error", "Failed to save risk tolerance. Please try again.");
+      showAlert("Error", "Failed to save risk tolerance. Please try again.");
     }
   };
 
@@ -88,9 +94,68 @@ const ProfileScreen = () => {
         const original = user?.profile?.spendingCategories ?? [];
         setSpendingCategories(original);
         updateProfile({ spendingCategories: original });
-        Alert.alert("Error", "Failed to save categories. Please try again.");
+        showAlert("Error", "Failed to save categories. Please try again.");
       }
     }, 500);
+  };
+
+  const handleStartEdit = (field: "name" | "income" | "age") => {
+    setEditingField(field);
+    setEditValue(
+      field === "name" ? user?.name ?? "" :
+      field === "income" ? String(user?.profile?.monthlyIncome ?? "") :
+      String(user?.profile?.age ?? "")
+    );
+  };
+
+  const handleCancelEdit = () => {
+    setEditingField(null);
+    setEditValue("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingField || isSaving) return;
+    setIsSaving(true);
+    try {
+      if (editingField === "name") {
+        const trimmed = editValue.trim();
+        if (!trimmed || trimmed.length < 2) {
+          showAlert("Invalid", "Name must be at least 2 characters.");
+          return;
+        }
+        const updated = await userApi.updateProfile({ name: trimmed });
+        setUser(updated);
+      } else if (editingField === "income") {
+        const val = parseFloat(editValue);
+        if (isNaN(val) || val < 0) {
+          showAlert("Invalid", "Please enter a valid income amount.");
+          return;
+        }
+        updateProfile({ monthlyIncome: val });
+        const updated = await userApi.updateProfile({ profile: { monthlyIncome: val } });
+        setUser(updated);
+        // Refresh spending summary so dashboard budget limit updates immediately
+        try {
+          const summary = await userApi.getSpendingSummary();
+          setSpendingSummary(summary);
+        } catch { /* non-critical */ }
+      } else if (editingField === "age") {
+        const val = parseInt(editValue, 10);
+        if (isNaN(val) || val < 13 || val > 120) {
+          showAlert("Invalid", "Please enter a valid age between 13 and 120.");
+          return;
+        }
+        updateProfile({ age: val });
+        const updated = await userApi.updateProfile({ profile: { age: val } });
+        setUser(updated);
+      }
+      setEditingField(null);
+      setEditValue("");
+    } catch {
+      showAlert("Error", "Failed to save. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const memberSinceLabel = useMemo(() => {
@@ -138,15 +203,45 @@ const ProfileScreen = () => {
             />
             <TouchableOpacity
               style={styles.editBadge}
-              onPress={() => console.log("Edit avatar")}
+              onPress={() => handleStartEdit("name")}
               activeOpacity={0.7}
             >
               <Ionicons name="pencil" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-          <Text style={[styles.userName, { color: themedColors.textPrimary }]}>
-            {user?.name || "Financial User"}
-          </Text>
+
+          {editingField === "name" ? (
+            <View style={styles.nameEditRow}>
+              <TextInput
+                value={editValue}
+                onChangeText={setEditValue}
+                style={[styles.nameInput, { color: themedColors.textPrimary, borderColor: colors.primary }]}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={handleSaveEdit}
+                placeholder="Your name"
+                placeholderTextColor={themedColors.textSecondary}
+              />
+              <View style={styles.editActions}>
+                {isSaving ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <>
+                    <TouchableOpacity onPress={handleCancelEdit} style={styles.editActionBtn}>
+                      <Ionicons name="close" size={20} color={colors.error} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleSaveEdit} style={styles.editActionBtn}>
+                      <Ionicons name="checkmark" size={20} color={colors.success} />
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          ) : (
+            <Text style={[styles.userName, { color: themedColors.textPrimary }]}>
+              {user?.name || "Financial User"}
+            </Text>
+          )}
           <View style={styles.memberInfo}>
             <Text
               style={[styles.memberText, { color: themedColors.textSecondary }]}
@@ -166,36 +261,83 @@ const ProfileScreen = () => {
             </Text>
           </View>
           <View style={styles.statsGrid}>
-            <View
-              style={[
-                styles.statCard,
-                {
-                  backgroundColor: themedColors.surface,
-                  borderColor: themedColors.border,
-                },
-              ]}
+            {/* Age Card */}
+            <TouchableOpacity
+              style={[styles.statCard, { backgroundColor: themedColors.surface, borderColor: editingField === "age" ? colors.primary : themedColors.border }]}
+              onPress={() => editingField !== "age" && handleStartEdit("age")}
+              activeOpacity={0.8}
             >
               <Text style={styles.statEmoji}>🎂</Text>
               <Text style={[styles.statLabel, { color: themedColors.textSecondary }]}>AGE</Text>
-              <Text style={[styles.statValue, { color: themedColors.textPrimary }]}>
-                {user?.profile?.age ?? "—"}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.statCard,
-                {
-                  backgroundColor: themedColors.surface,
-                  borderColor: themedColors.border,
-                },
-              ]}
+              {editingField === "age" ? (
+                <View style={styles.cardEditArea}>
+                  <TextInput
+                    value={editValue}
+                    onChangeText={setEditValue}
+                    keyboardType="numeric"
+                    style={[styles.cardInput, { color: themedColors.textPrimary }]}
+                    autoFocus
+                    maxLength={3}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSaveEdit}
+                  />
+                  <View style={styles.cardEditBtns}>
+                    {isSaving ? <ActivityIndicator size="small" color={colors.primary} /> : (
+                      <>
+                        <TouchableOpacity onPress={handleCancelEdit}><Ionicons name="close-circle" size={20} color={colors.error} /></TouchableOpacity>
+                        <TouchableOpacity onPress={handleSaveEdit}><Ionicons name="checkmark-circle" size={20} color={colors.success} /></TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.cardValueRow}>
+                  <Text style={[styles.statValue, { color: themedColors.textPrimary }]}>
+                    {user?.profile?.age ?? "—"}
+                  </Text>
+                  <Ionicons name="pencil" size={11} color={colors.primary} style={{ marginLeft: 4, marginTop: 4 }} />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Income Card */}
+            <TouchableOpacity
+              style={[styles.statCard, { backgroundColor: themedColors.surface, borderColor: editingField === "income" ? colors.primary : themedColors.border }]}
+              onPress={() => editingField !== "income" && handleStartEdit("income")}
+              activeOpacity={0.8}
             >
               <Text style={styles.statEmoji}>💰</Text>
-              <Text style={[styles.statLabel, { color: themedColors.textSecondary }]}>INCOME</Text>
-              <Text style={[styles.statValue, { color: themedColors.textPrimary }]}>
-                ${user?.profile?.monthlyIncome?.toLocaleString() ?? "—"}
-              </Text>
-            </View>
+              <Text style={[styles.statLabel, { color: themedColors.textSecondary }]}>INCOME/MO</Text>
+              {editingField === "income" ? (
+                <View style={styles.cardEditArea}>
+                  <TextInput
+                    value={editValue}
+                    onChangeText={setEditValue}
+                    keyboardType="numeric"
+                    style={[styles.cardInput, { color: themedColors.textPrimary }]}
+                    autoFocus
+                    maxLength={10}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSaveEdit}
+                  />
+                  <View style={styles.cardEditBtns}>
+                    {isSaving ? <ActivityIndicator size="small" color={colors.primary} /> : (
+                      <>
+                        <TouchableOpacity onPress={handleCancelEdit}><Ionicons name="close-circle" size={20} color={colors.error} /></TouchableOpacity>
+                        <TouchableOpacity onPress={handleSaveEdit}><Ionicons name="checkmark-circle" size={20} color={colors.success} /></TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.cardValueRow}>
+                  <Text style={[styles.statValue, { color: themedColors.textPrimary }]}>
+                    ${(user?.profile?.monthlyIncome ?? 0).toLocaleString()}
+                  </Text>
+                  <Ionicons name="pencil" size={11} color={colors.primary} style={{ marginLeft: 4, marginTop: 4 }} />
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -465,6 +607,53 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginTop: 4,
     fontFamily: typography.fontFamily.display,
+  },
+  cardValueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  cardEditArea: {
+    alignItems: "center",
+    marginTop: 4,
+    width: "100%",
+  },
+  cardInput: {
+    fontSize: 18,
+    fontWeight: "700",
+    fontFamily: typography.fontFamily.display,
+    borderBottomWidth: 1.5,
+    borderColor: colors.primary,
+    textAlign: "center",
+    paddingVertical: 2,
+    width: "100%",
+  },
+  cardEditBtns: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 6,
+  },
+  nameEditRow: {
+    alignItems: "center",
+    width: "80%",
+    marginBottom: 4,
+  },
+  nameInput: {
+    fontSize: 20,
+    fontWeight: "700",
+    fontFamily: typography.fontFamily.display,
+    borderBottomWidth: 1.5,
+    textAlign: "center",
+    paddingVertical: 4,
+    width: "100%",
+  },
+  editActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  editActionBtn: {
+    padding: 4,
   },
   goalsContainer: {
     gap: 12,

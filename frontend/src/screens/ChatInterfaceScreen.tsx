@@ -14,8 +14,8 @@ import {
   Platform,
   Pressable,
   Image,
-  Alert,
 } from "react-native";
+import { useAlertStore } from "../stores/alertStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -83,6 +83,7 @@ const UserMsgBubble = ({ msg }: { msg: UiMessage }) => (
 const ChatInterfaceScreen = () => {
   const themedColors = useThemedColors();
   const navigation = useNavigation<any>();
+  const { showAlert } = useAlertStore();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
   const { conversationId } = route.params as { conversationId: string };
@@ -132,7 +133,7 @@ const ChatInterfaceScreen = () => {
   const handlePickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Permission required", "Allow access to your photo library to attach images.");
+      showAlert("Permission required", "Allow access to your photo library to attach images.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({

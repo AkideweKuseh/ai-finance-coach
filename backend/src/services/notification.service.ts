@@ -24,7 +24,7 @@ export const computeSpendingPct = (spent: number, budget: number): number => {
 };
 
 export const shouldSend80Alert = (pct: number, lastAlert80: Date | null): boolean => {
-  if (pct < 0.8) return false;
+  if (pct < 0.8 || pct >= 1.0) return false;
   if (!lastAlert80) return true;
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -51,22 +51,30 @@ export const checkAndSendSpendingAlert = async (
     : 100;
 
   const pct = computeSpendingPct(totalSpent, dailyBudget);
-  const symbol = user.userPrefs?.currency ?? "USD";
+  const currencyCode = user.userPrefs?.currency ?? "USD";
 
   if (shouldSend100Alert(pct, user.notifiedToday?.alert100 ?? null)) {
-    await sendPushNotification(
-      user.pushToken,
-      "🚨 Daily limit reached!",
-      `You've spent ${symbol} ${totalSpent.toFixed(2)} today. The coach has tips — tap to see.`,
-      { screen: "ChatHistory" }
-    );
-    await User.updateOne({ _id: userId }, { "notifiedToday.alert100": new Date() });
+    try {
+      await sendPushNotification(
+        user.pushToken,
+        "🚨 Daily limit reached!",
+        `You've spent ${currencyCode} ${totalSpent.toFixed(2)} today. The coach has tips — tap to see.`,
+        { screen: "ChatHistory" }
+      );
+      await User.updateOne({ _id: userId }, { "notifiedToday.alert100": new Date() });
+    } catch (err) {
+      console.error("[NotificationService] Failed to send 100% alert:", err);
+    }
   } else if (shouldSend80Alert(pct, user.notifiedToday?.alert80 ?? null)) {
-    await sendPushNotification(
-      user.pushToken,
-      "⚠️ Heads up!",
-      `You've used 80% of today's ${symbol} ${dailyBudget} budget.`
-    );
-    await User.updateOne({ _id: userId }, { "notifiedToday.alert80": new Date() });
+    try {
+      await sendPushNotification(
+        user.pushToken,
+        "⚠️ Heads up!",
+        `You've used 80% of today's ${currencyCode} ${dailyBudget} budget.`
+      );
+      await User.updateOne({ _id: userId }, { "notifiedToday.alert80": new Date() });
+    } catch (err) {
+      console.error("[NotificationService] Failed to send 80% alert:", err);
+    }
   }
 };

@@ -15,6 +15,7 @@ import {
   RobotoMono_700Bold,
 } from "@expo-google-fonts/roboto-mono";
 import AppNavigator from "./src/navigation/AppNavigator";
+import { AppAlertModal } from "./src/components/common/AppAlertModal";
 import { useAuthStore } from "./src/stores/authStore";
 import { useThemeStore } from "./src/stores/themeStore";
 import { useUserStore } from "./src/stores/userStore";
@@ -79,6 +80,7 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style={isDark ? "light" : "dark"} />
       <AppNavigator />
+      <AppAlertModal />
     </SafeAreaProvider>
   );
 }

@@ -11,8 +11,8 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from "react-native";
+import { useAlertStore } from "../stores/alertStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { formatDistanceToNow } from "date-fns";
@@ -24,6 +24,7 @@ import { ConversationSummary } from "../types/chat";
 const ChatHistoryScreen = () => {
   const themedColors = useThemedColors();
   const navigation = useNavigation<any>();
+  const { showAlert } = useAlertStore();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -46,7 +47,7 @@ const ChatHistoryScreen = () => {
       const conv = await chatApi.createConversation();
       navigation.navigate("ChatInterface", { conversationId: conv._id });
     } catch {
-      Alert.alert("Error", "Could not start a new chat. Please try again.");
+      showAlert("Error", "Could not start a new chat. Please try again.");
     }
   };
 

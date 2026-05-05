@@ -58,9 +58,9 @@ export const login = catchAsync(async (req: Request, res: Response) => {
   const payload: JWTPayload = { userId: user._id.toString(), email: user.email };
   const { accessToken, refreshToken } = generateTokenPair(payload);
 
-  user.refreshTokens.push(refreshToken);
-  if (user.refreshTokens.length > 5) user.refreshTokens = user.refreshTokens.slice(-5);
-  await user.save();
+  const updatedTokens = [...user.refreshTokens, refreshToken];
+  const trimmedTokens = updatedTokens.length > 5 ? updatedTokens.slice(-5) : updatedTokens;
+  await User.updateOne({ _id: user._id }, { refreshTokens: trimmedTokens });
 
   res.status(200).json({
     success: true,
@@ -88,9 +88,8 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
   const newPayload: JWTPayload = { userId: user._id.toString(), email: user.email };
   const { accessToken: newAccessToken, refreshToken: newRefreshToken } = generateTokenPair(newPayload);
 
-  user.refreshTokens = user.refreshTokens.filter((t) => t !== refreshToken);
-  user.refreshTokens.push(newRefreshToken);
-  await user.save();
+  const newTokens = [...user.refreshTokens.filter((t) => t !== refreshToken), newRefreshToken];
+  await User.updateOne({ _id: user._id }, { refreshTokens: newTokens });
 
   res.status(200).json({
     success: true,
@@ -105,8 +104,7 @@ export const logout = catchAsync(async (req: Request, res: Response) => {
   if (userId && refreshToken) {
     const user = await User.findById(userId);
     if (user) {
-      user.refreshTokens = user.refreshTokens.filter((t: string) => t !== refreshToken);
-      await user.save();
+      await User.updateOne({ _id: user._id }, { $pull: { refreshTokens: refreshToken } });
     }
   }
 

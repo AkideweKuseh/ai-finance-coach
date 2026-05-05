@@ -38,26 +38,21 @@ export const updateProfile = catchAsync(
     const userId = req.user?.userId;
     const { name, profile } = req.body;
 
-    const user = await User.findById(userId);
-
-    if (!user) {
-      throw new AppError("User not found", 404);
-    }
-
-    // Update name if provided
-    if (name) {
-      user.name = name;
-    }
-
-    // Update profile fields if provided
+    const updateFields: Record<string, any> = {};
+    if (name) updateFields.name = name;
     if (profile) {
-      user.profile = {
-        ...(user.profile as any).toObject(),
-        ...profile,
-      } as any;
+      Object.entries(profile).forEach(([k, v]) => {
+        updateFields[`profile.${k}`] = v;
+      });
     }
 
-    await user.save();
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateFields },
+      { new: true }
+    );
+
+    if (!user) throw new AppError("User not found", 404);
 
     res.status(200).json({
       success: true,

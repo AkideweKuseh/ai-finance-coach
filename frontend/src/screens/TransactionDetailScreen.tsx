@@ -10,10 +10,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { useAlertStore } from "../stores/alertStore";
 import {
   colors,
   spacing,
@@ -31,7 +31,7 @@ const TransactionDetailScreen = () => {
   const themedColors = useThemedColors();
   const { transactionId } = route.params as { transactionId: string };
   const { transactions, deleteTransaction } = useTransactionStore();
-  
+  const { showAlert } = useAlertStore();
   const [transaction, setTransaction] = useState<any>(null);
 
   useEffect(() => {
@@ -40,13 +40,13 @@ const TransactionDetailScreen = () => {
   }, [transactionId, transactions]);
 
     const handleDelete = async () => {
-        Alert.alert(
+        showAlert(
             "Delete Transaction",
             "Are you sure you want to delete this transaction?",
             [
                 { text: "Cancel", style: "cancel" },
-                { 
-                    text: "Delete", 
+                {
+                    text: "Delete",
                     style: "destructive",
                     onPress: async () => {
                         await deleteTransaction(transactionId);

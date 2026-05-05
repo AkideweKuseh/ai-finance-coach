@@ -16,9 +16,14 @@ describe("shouldSend80Alert", () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  it("returns true when pct >= 0.8 and not yet notified today", () => {
+  it("returns true when pct >= 0.8 and below 1.0, not yet notified today", () => {
     expect(shouldSend80Alert(0.81, null)).toBe(true);
-    expect(shouldSend80Alert(1.0, null)).toBe(true);
+    expect(shouldSend80Alert(0.99, null)).toBe(true);
+  });
+
+  it("returns false when pct is at or above 1.0", () => {
+    expect(shouldSend80Alert(1.0, null)).toBe(false);
+    expect(shouldSend80Alert(1.5, null)).toBe(false);
   });
 
   it("returns false when pct < 0.8", () => {
