@@ -12,6 +12,7 @@ export interface IUserProfile {
   riskTolerance: "conservative" | "moderate" | "aggressive";
   primaryGoal: "save_emergency" | "pay_debt" | "invest" | "budget_control";
   spendingCategories: string[];
+  monthlySavingsTarget: number;
 }
 
 export interface IUser extends Document {
@@ -20,13 +21,25 @@ export interface IUser extends Document {
   name: string;
   profile: IUserProfile;
   refreshTokens: string[]; // Store active refresh tokens
+  pushToken: string | null;
+  hasCompletedOnboarding: boolean;
+  userPrefs: {
+    spendingAlerts: boolean;
+    weeklyReport: boolean;
+    checkIn: boolean;
+    currency: string;
+  };
+  notifiedToday: {
+    alert80: Date | null;
+    alert100: Date | null;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
 
 const UserProfileSchema = new Schema<IUserProfile>({
-  age: { type: Number, required: true, min: 13, max: 120 },
-  monthlyIncome: { type: Number, required: true, min: 0 },
+  age: { type: Number, default: 25, min: 13, max: 120 },
+  monthlyIncome: { type: Number, default: 0, min: 0 },
   riskTolerance: {
     type: String,
     required: true,
@@ -40,6 +53,7 @@ const UserProfileSchema = new Schema<IUserProfile>({
     default: "budget_control",
   },
   spendingCategories: [{ type: String }],
+  monthlySavingsTarget: { type: Number, default: 0, min: 0 },
 });
 
 const UserSchema = new Schema<IUser>(
@@ -69,6 +83,18 @@ const UserSchema = new Schema<IUser>(
       required: true,
     },
     refreshTokens: [{ type: String }],
+    pushToken: { type: String, default: null },
+    hasCompletedOnboarding: { type: Boolean, default: false },
+    userPrefs: {
+      spendingAlerts: { type: Boolean, default: true },
+      weeklyReport:   { type: Boolean, default: true },
+      checkIn:        { type: Boolean, default: true },
+      currency:       { type: String, default: 'USD' },
+    },
+    notifiedToday: {
+      alert80:  { type: Date, default: null },
+      alert100: { type: Date, default: null },
+    },
   },
   {
     timestamps: true,
