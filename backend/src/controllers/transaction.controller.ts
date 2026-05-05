@@ -9,6 +9,7 @@ import { Response } from "express";
 import { Transaction } from "../models/Transaction.model";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { AppError, catchAsync } from "../middleware/error.middleware";
+import { checkAndSendSpendingAlert } from "../services/notification.service";
 
 /**
  * Get all user transactions
@@ -57,6 +58,15 @@ export const logTransaction = catchAsync(async (req: AuthRequest, res: Response)
     success: true,
     message: "Transaction logged successfully",
     data: transaction,
+  });
+
+  const alertUserId = req.user?.userId!;
+  Transaction.find({
+    userId: alertUserId,
+    date: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+  }).then((todayTxs) => {
+    const todayTotal = todayTxs.reduce((sum, t) => sum + t.amount, 0);
+    checkAndSendSpendingAlert(alertUserId, todayTotal).catch(console.error);
   });
 });
 

@@ -7,6 +7,7 @@
 import { Response } from "express";
 import { User } from "../models/User.model";
 import { Transaction } from "../models/Transaction.model";
+import { WeeklyReport } from "../models/WeeklyReport.model";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { AppError, catchAsync } from "../middleware/error.middleware";
 
@@ -44,6 +45,14 @@ export const updateProfile = catchAsync(
       Object.entries(profile).forEach(([k, v]) => {
         updateFields[`profile.${k}`] = v;
       });
+    }
+    if (req.body.userPrefs) {
+      Object.entries(req.body.userPrefs as Record<string, unknown>).forEach(([k, v]) => {
+        updateFields[`userPrefs.${k}`] = v;
+      });
+    }
+    if (typeof req.body.hasCompletedOnboarding === "boolean") {
+      updateFields.hasCompletedOnboarding = req.body.hasCompletedOnboarding;
     }
 
     const user = await User.findByIdAndUpdate(
@@ -143,9 +152,47 @@ export const deleteAccount = catchAsync(
   }
 );
 
+export const savePushToken = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { pushToken } = req.body;
+
+    if (!pushToken || typeof pushToken !== "string") {
+      throw new AppError("pushToken is required", 400);
+    }
+
+    await User.findByIdAndUpdate(userId, { pushToken });
+    res.status(200).json({ success: true, message: "Push token saved" });
+  }
+);
+
+export const getReports = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const reports = await WeeklyReport.find({ userId })
+      .sort({ createdAt: -1 })
+      .select("weekStart weekEnd totalSpent topCategory txCount createdAt");
+
+    res.status(200).json({ success: true, data: reports });
+  }
+);
+
+export const getReportById = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const report = await WeeklyReport.findOne({ _id: req.params.id, userId });
+    if (!report) throw new AppError("Report not found", 404);
+
+    res.status(200).json({ success: true, data: report });
+  }
+);
+
 export default {
   getProfile,
   updateProfile,
   getSpendingSummary,
   deleteAccount,
+  savePushToken,
+  getReports,
+  getReportById,
 };

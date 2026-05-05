@@ -95,6 +95,14 @@ Please try again in a moment. If the problem persists, contact support.`,
   }
 
   /**
+   * Generate text from a single prompt
+   */
+  async generateText(prompt: string): Promise<string> {
+    const response = await this.chat([{ role: "user", content: prompt }]);
+    return response.content;
+  }
+
+  /**
    * Get current provider name
    */
   getProviderName(): string {

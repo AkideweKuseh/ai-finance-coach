@@ -8,6 +8,9 @@ import {
   updateProfile,
   getSpendingSummary, // Changed getDailySummary
   deleteAccount,
+  savePushToken,
+  getReports,
+  getReportById,
 } from "../controllers/user.controller";
 import { authenticate } from "../middleware/auth.middleware";
 
@@ -43,5 +46,9 @@ router.get("/spending-summary", getSpendingSummary);
  * Delete user account
  */
 router.delete("/account", deleteAccount);
+
+router.post("/push-token", authenticate, savePushToken);
+router.get("/reports", authenticate, getReports);
+router.get("/reports/:id", authenticate, getReportById);
 
 export default router;

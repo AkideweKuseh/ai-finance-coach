@@ -7,6 +7,7 @@
 import { config } from "./config/environment";
 import { connectDatabase } from "./config/database";
 import { createApp } from "./app";
+import { startCronJobs } from "./services/cron.service";
 
 /**
  * Start the server
@@ -41,6 +42,7 @@ const startServer = async () => {
       console.log("");
       console.log("Press Ctrl+C to stop the server");
       console.log("=".repeat(60));
+      startCronJobs();
     });
 
     // Graceful shutdown
