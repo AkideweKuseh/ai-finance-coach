@@ -20,6 +20,19 @@ import { useAuthStore } from "./src/stores/authStore";
 import { useThemeStore } from "./src/stores/themeStore";
 import { useUserStore } from "./src/stores/userStore";
 import * as userApi from "./src/api/user";
+import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
+import apiClient from "./src/api/client";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export default function App() {
   const { loadTokens, isAuthenticated } = useAuthStore();
@@ -71,6 +84,36 @@ export default function App() {
       console.error("Font loading error:", fontError);
     }
   }, [fontError]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const registerPushToken = async () => {
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status !== "granted") return;
+
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+        await apiClient.post("/user/push-token", { pushToken: tokenData.data });
+      } catch (err) {
+        console.warn("Push token registration failed:", err);
+      }
+    };
+
+    registerPushToken();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as any;
+      if (data?.screen === "WeeklyReport" && data?.reportId) {
+        // Navigation handled by OS when app is backgrounded; foreground case noted for future nav ref
+        console.log("[Notification] WeeklyReport deep-link received:", data.reportId);
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   if (!fontsLoaded && !fontError) {
     return null;
