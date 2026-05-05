@@ -28,18 +28,31 @@ import { useAuthStore } from "../stores/authStore";
 import { useUserStore } from "../stores/userStore";
 import { useThemeStore } from "../stores/themeStore";
 import * as authApi from "../api/auth";
+import * as userApi from "../api/user";
+import { CurrencyPicker } from "../components/common/CurrencyPicker";
+import { getCurrencySymbol } from "../utils/currency";
 
 const SettingsScreen = () => {
   const { clearTokens } = useAuthStore();
-  const { user, clearUser } = useUserStore();
+  const { user, clearUser, setUser } = useUserStore();
   const { themeMode, isDark, setThemeMode } = useThemeStore();
   const themedColors = useThemedColors();
   const { showAlert } = useAlertStore();
-  
-  const [spendingAlerts, setSpendingAlerts] = useState(true);
-  const [budgetCheckins, setBudgetCheckins] = useState(false);
-  const [weeklyReport, setWeeklyReport] = useState(true);
-  const [currency, setCurrency] = useState("USD");
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+
+  const spendingAlerts = user?.userPrefs?.spendingAlerts ?? true;
+  const weeklyReport   = user?.userPrefs?.weeklyReport   ?? true;
+  const checkIn        = user?.userPrefs?.checkIn        ?? true;
+  const currency       = user?.userPrefs?.currency       ?? "USD";
+
+  const updatePref = async (key: string, value: boolean | string) => {
+    try {
+      const updated = await userApi.updateProfile({ userPrefs: { [key]: value } } as any);
+      setUser(updated);
+    } catch {
+      showAlert("Error", "Failed to save preference.");
+    }
+  };
 
   const handleLogout = async () => {
     showAlert("Logout", "Are you sure you want to logout?", [
@@ -146,13 +159,13 @@ const SettingsScreen = () => {
             ]}
           >
             {/* Currency Preference */}
-            <TouchableOpacity style={styles.settingRow}>
+            <TouchableOpacity style={styles.settingRow} onPress={() => setShowCurrencyPicker(true)}>
                 <View style={styles.settingLeft}>
                     <Text style={styles.settingEmoji}>💲</Text>
                     <Text style={[styles.settingTitle, { color: themedColors.textPrimary }]}>Currency</Text>
                 </View>
                 <View style={styles.settingRight}>
-                    <Text style={[styles.settingValue, { color: themedColors.textSecondary }]}>{currency}</Text>
+                    <Text style={[styles.settingValue, { color: themedColors.textSecondary }]}>{`${currency} — ${getCurrencySymbol(currency)}`}</Text>
                     <Ionicons name="chevron-forward" size={18} color={themedColors.textSecondary} />
                 </View>
             </TouchableOpacity>
@@ -233,7 +246,7 @@ const SettingsScreen = () => {
               </View>
               <Switch
                 value={spendingAlerts}
-                onValueChange={setSpendingAlerts}
+                onValueChange={(v) => updatePref("spendingAlerts", v)}
                 trackColor={{
                   false: isDark ? colors.gray[600] : colors.gray[500],
                   true: colors.primary,
@@ -263,8 +276,8 @@ const SettingsScreen = () => {
                 </Text>
               </View>
               <Switch
-                value={budgetCheckins}
-                onValueChange={setBudgetCheckins}
+                value={checkIn}
+                onValueChange={(v) => updatePref("checkIn", v)}
                 trackColor={{
                   false: isDark ? colors.gray[600] : colors.gray[500],
                   true: colors.primary,
@@ -295,7 +308,7 @@ const SettingsScreen = () => {
               </View>
               <Switch
                 value={weeklyReport}
-                onValueChange={setWeeklyReport}
+                onValueChange={(v) => updatePref("weeklyReport", v)}
                 trackColor={{
                   false: isDark ? colors.gray[600] : colors.gray[500],
                   true: colors.primary,
@@ -371,6 +384,12 @@ const SettingsScreen = () => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      <CurrencyPicker
+        visible={showCurrencyPicker}
+        selectedCode={currency}
+        onSelect={(code) => { updatePref("currency", code); }}
+        onClose={() => setShowCurrencyPicker(false)}
+      />
     </ScreenContainer>
   );
 };
