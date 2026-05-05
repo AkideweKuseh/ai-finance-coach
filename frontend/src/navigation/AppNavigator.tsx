@@ -24,9 +24,12 @@ import TransactionDetailScreen from "../screens/TransactionDetailScreen";
 import LogTransactionScreen from "../screens/LogTransactionScreen";
 import AllTransactionsScreen from "../screens/AllTransactionsScreen";
 import ScanReceiptScreen from "../screens/ScanReceiptScreen";
+import OnboardingScreen from "../screens/OnboardingScreen";
+import WeeklyReportScreen from "../screens/WeeklyReportScreen";
 
 import { RootStackParamList, MainTabParamList } from "./types";
 import { useAuthStore } from "../stores/authStore";
+import { useUserStore } from "../stores/userStore";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
@@ -96,28 +99,34 @@ const MainTabNavigator = () => {
 
 const RootNavigator = () => {
   const { isAuthenticated, isLoading } = useAuthStore();
+  const { user } = useUserStore();
 
   if (isLoading) return null;
 
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
       {isAuthenticated ? (
-        <>
-          <RootStack.Screen name="Main" component={MainTabNavigator} />
-          <RootStack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
-          <RootStack.Screen
-            name="LogTransaction"
-            component={LogTransactionScreen}
-            options={{ presentation: "modal" }}
-          />
-          <RootStack.Screen name="AllTransactions" component={AllTransactionsScreen} />
-          <RootStack.Screen
-            name="ScanReceipt"
-            component={ScanReceiptScreen}
-            options={{ presentation: "modal" }}
-          />
-          <RootStack.Screen name="ChatInterface" component={ChatInterfaceScreen} />
-        </>
+        user?.hasCompletedOnboarding === false ? (
+          <RootStack.Screen name="Onboarding" component={OnboardingScreen} />
+        ) : (
+          <>
+            <RootStack.Screen name="Main" component={MainTabNavigator} />
+            <RootStack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
+            <RootStack.Screen
+              name="LogTransaction"
+              component={LogTransactionScreen}
+              options={{ presentation: "modal" }}
+            />
+            <RootStack.Screen name="AllTransactions" component={AllTransactionsScreen} />
+            <RootStack.Screen
+              name="ScanReceipt"
+              component={ScanReceiptScreen}
+              options={{ presentation: "modal" }}
+            />
+            <RootStack.Screen name="ChatInterface" component={ChatInterfaceScreen} />
+            <RootStack.Screen name="WeeklyReport" component={WeeklyReportScreen} />
+          </>
+        )
       ) : (
         <RootStack.Screen name="Auth" component={AuthNavigator} />
       )}
