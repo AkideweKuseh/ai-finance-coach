@@ -14,6 +14,8 @@ export type RootStackParamList = {
   AllTransactions: undefined;
   ScanReceipt: undefined;
   ChatInterface: { conversationId: string };
+  Onboarding: undefined;
+  WeeklyReport: { reportId: string };
 };
 
 export type AuthStackParamList = {

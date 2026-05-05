@@ -2,6 +2,13 @@
  * User Type Definitions
  */
 
+export interface UserPrefs {
+  spendingAlerts: boolean;
+  weeklyReport: boolean;
+  checkIn: boolean;
+  currency: string;
+}
+
 export interface User {
   _id: string;
   email: string;
@@ -9,6 +16,8 @@ export interface User {
   profile: UserProfile;
   createdAt: Date;
   updatedAt: Date;
+  userPrefs?: UserPrefs;
+  hasCompletedOnboarding?: boolean;
 }
 
 export interface UserProfile {
@@ -25,6 +34,8 @@ export interface UserProfile {
 
   // UI preferences
   currency: string;
+
+  monthlySavingsTarget?: number;
 }
 
 export interface SpendingSummary {
