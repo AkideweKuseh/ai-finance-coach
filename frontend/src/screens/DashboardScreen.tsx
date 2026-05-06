@@ -3,7 +3,7 @@
  * Main home screen showing daily spending, budget, and transactions
  */
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList, MainTabScreenProps } from "../navigation/types";
 import {
@@ -28,7 +28,10 @@ import Svg, { Circle } from "react-native-svg";
 import { ScreenContainer } from "../components/common/ScreenContainer";
 import { useUserStore } from "../stores/userStore";
 import { useTransactionStore } from "../stores/transactionStore";
+import { useNotificationStore } from "../stores/notificationStore";
 import * as userApi from "../api/user";
+import * as notificationsApi from "../api/notifications";
+import { getCurrencySymbol } from "../utils/currency";
 
 interface QuickActionProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -67,7 +70,7 @@ const QuickAction = ({ icon, label, isPrimary, onPress }: QuickActionProps) => {
   );
 };
 
-const TransactionItem = ({ item, onPress }: { item: any; onPress: () => void }) => {
+const TransactionItem = ({ item, onPress, symbol }: { item: any; onPress: () => void; symbol: string }) => {
   const themedColors = useThemedColors();
   return (
     <TouchableOpacity
@@ -90,7 +93,7 @@ const TransactionItem = ({ item, onPress }: { item: any; onPress: () => void }) 
             </Text>
         </View>
         <Text style={[styles.transactionAmount, { color: themedColors.textPrimary }]}>
-            -${item.amount.toFixed(2)}
+            -{symbol}{item.amount.toFixed(2)}
         </Text>
     </TouchableOpacity>
   );
@@ -107,36 +110,66 @@ const getCategoryIcon = (category: string): keyof typeof Ionicons.glyphMap => {
     }
 }
 
+// Minimum ms between background fetches — prevents StrictMode double-fire
+// and rapid focus events from hammering the API.
+const MIN_FETCH_INTERVAL_MS = 15_000;
+
 const DashboardScreen = () => {
   const themedColors = useThemedColors();
   const navigation = useNavigation<MainTabScreenProps<"Dashboard">["navigation"]>();
-  const { user, spendingSummary, isLoading: isUserLoading } = useUserStore();
-  const { transactions, fetchTransactions, isLoading: isTransLoading } = useTransactionStore();
+  const { user, spendingSummary } = useUserStore();
+  const { transactions, fetchTransactions } = useTransactionStore();
+  const { unreadCount, setNotifications } = useNotificationStore();
 
-  useEffect(() => {
-    const load = async () => {
-      fetchTransactions();
-      try {
-        const summary = await userApi.getSpendingSummary();
-        useUserStore.getState().setSpendingSummary(summary);
-      } catch {
-        // silent — dashboard shows defaults
-      }
-    };
-    load();
-  }, []);
+  // Throttle ref — only used internally, not reactive state
+  const lastFetchedAt = useRef<number>(0);
+  // Separate manual-refresh spinner so the auto-background load never shows the indicator
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const now = Date.now();
+      if (now - lastFetchedAt.current < MIN_FETCH_INTERVAL_MS) return;
+      lastFetchedAt.current = now;
+
+      const load = async () => {
+        // Fire-and-forget transactions — don't await so it doesn't block summary/notifications
+        fetchTransactions().catch(() => {});
+        try {
+          const summary = await userApi.getSpendingSummary();
+          useUserStore.getState().setSpendingSummary(summary);
+        } catch (e: any) {
+          console.log("[Dashboard] spending-summary fetch failed:", e?.message);
+        }
+        try {
+          const notifData = await notificationsApi.fetchNotifications();
+          setNotifications(notifData.notifications, notifData.unreadCount);
+        } catch (e: any) {
+          console.log("[Dashboard] notifications fetch failed:", e?.message);
+        }
+      };
+      load();
+    }, [])
+  );
 
   const onRefresh = React.useCallback(async () => {
-    fetchTransactions();
+    lastFetchedAt.current = 0; // reset throttle so the manual refresh always fires
+    setIsManualRefreshing(true);
     try {
-      const summary = await userApi.getSpendingSummary();
-      useUserStore.getState().setSpendingSummary(summary);
-    } catch {
-      // silent
+      await Promise.all([
+        fetchTransactions(),
+        userApi.getSpendingSummary().then((s) => useUserStore.getState().setSpendingSummary(s)),
+        notificationsApi.fetchNotifications().then((d) => setNotifications(d.notifications, d.unreadCount)),
+      ]);
+    } catch (e: any) {
+      console.log("[Dashboard] manual refresh failed:", e?.message);
+    } finally {
+      setIsManualRefreshing(false);
     }
   }, []);
 
   const firstName = user?.name?.split(" ")?.[0] || "Friend";
+  const symbol = getCurrencySymbol(user?.userPrefs?.currency ?? "USD");
 
   const budgetLimit = spendingSummary?.budgetLimit || 100;
   const totalSpent = spendingSummary?.totalSpent || 0;
@@ -149,8 +182,7 @@ const DashboardScreen = () => {
   const isOverBudget = totalSpent > budgetLimit;
   const progressColor = isOverBudget ? colors.error : colors.primary;
 
-  // Calculate circle progress (circumference = 2πr, r=80)
-  const radius = 80;
+  const radius = 95;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
@@ -179,10 +211,16 @@ const DashboardScreen = () => {
           </Text>
         </View>
         <TouchableOpacity
-            style={[styles.avatar, { backgroundColor: themedColors.surface }]}
-            onPress={() => navigation.navigate("Profile")}
+          style={[styles.bellBtn, { backgroundColor: themedColors.surface }]}
+          onPress={() => navigation.navigate("Notifications")}
+          activeOpacity={0.75}
         >
-          <Ionicons name="person" size={24} color={colors.primary} />
+          <Ionicons name="notifications" size={22} color={colors.primary} />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 99 ? "99+" : String(unreadCount)}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -192,7 +230,7 @@ const DashboardScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-            <RefreshControl refreshing={isUserLoading || isTransLoading} onRefresh={onRefresh} />
+          <RefreshControl refreshing={isManualRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
         {/* Hero Summary Card */}
@@ -210,20 +248,18 @@ const DashboardScreen = () => {
 
           <View style={styles.progressRingContainer}>
             {/* SVG Progress Ring */}
-            <Svg width={240} height={240} style={styles.progressRing}>
-              {/* Background Circle */}
+            <Svg width={264} height={264} style={styles.progressRing}>
               <Circle
-                cx="120"
-                cy="120"
+                cx="132"
+                cy="132"
                 r={radius}
                 stroke={themedColors.surfaceLight}
                 strokeWidth="16"
                 fill="transparent"
               />
-              {/* Progress Circle */}
               <Circle
-                cx="120"
-                cy="120"
+                cx="132"
+                cy="132"
                 r={radius}
                 stroke={progressColor}
                 strokeWidth="16"
@@ -232,27 +268,31 @@ const DashboardScreen = () => {
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 rotation="-90"
-                origin="120, 120"
+                origin="132, 132"
               />
             </Svg>
 
             {/* Inner Content */}
             <View style={styles.progressContent}>
-              <Text
-                style={[
-                  styles.spentAmount,
-                  { color: themedColors.textPrimary },
-                ]}
-              >
-                ${totalSpent.toFixed(2)}
+              <Text style={[styles.spentLabel, { color: themedColors.textSecondary }]}>
+                Spent
               </Text>
+              <Text style={[styles.spentAmount, { color: themedColors.textPrimary }]}>
+                {symbol}{totalSpent.toFixed(2)}
+              </Text>
+              <View style={[styles.ringDivider, { backgroundColor: themedColors.border }]} />
               <Text
                 style={[
-                  styles.budgetMeta,
-                  { color: themedColors.textSecondary },
+                  styles.amountLeft,
+                  { color: isOverBudget ? colors.error : "#10B981" },
                 ]}
               >
-                of ${budgetLimit} limit
+                {isOverBudget
+                  ? `${symbol}${(totalSpent - budgetLimit).toFixed(2)} over`
+                  : `${symbol}${(budgetLimit - totalSpent).toFixed(2)} left`}
+              </Text>
+              <Text style={[styles.budgetMeta, { color: themedColors.textSecondary }]}>
+                of {symbol}{budgetLimit} daily
               </Text>
             </View>
           </View>
@@ -314,9 +354,10 @@ const DashboardScreen = () => {
                 </Text>
             ) : (
                 recentTransactions.map((t) => (
-                    <TransactionItem 
-                        key={t._id} 
-                        item={t} 
+                    <TransactionItem
+                        key={t._id}
+                        item={t}
+                        symbol={symbol}
                         onPress={() => navigation.navigate("TransactionDetail", { transactionId: t._id })} 
                     />
                 ))
@@ -355,7 +396,7 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     fontFamily: typography.fontFamily.display,
   },
-  avatar: {
+  bellBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -363,6 +404,24 @@ const styles = StyleSheet.create({
     borderColor: `${colors.primary}33`,
     alignItems: "center",
     justifyContent: "center",
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.error,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#fff",
+    fontFamily: typography.fontFamily.display,
   },
   scrollView: {
     flex: 1,
@@ -397,19 +456,37 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   progressContent: {
-    width: 240,
-    height: 240,
+    width: 264,
+    height: 264,
     alignItems: "center",
     justifyContent: "center",
   },
+  spentLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    fontFamily: typography.fontFamily.body,
+    marginBottom: 2,
+  },
   spentAmount: {
-    fontSize: 40,
+    fontSize: 30,
     fontWeight: "800",
-    letterSpacing: -1,
+    letterSpacing: -0.5,
+    fontFamily: typography.fontFamily.display,
+  },
+  ringDivider: {
+    width: 40,
+    height: 1,
+    marginVertical: 6,
+  },
+  amountLeft: {
+    fontSize: 16,
+    fontWeight: "700",
     fontFamily: typography.fontFamily.display,
   },
   budgetMeta: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
     marginTop: 2,
     fontFamily: typography.fontFamily.body,

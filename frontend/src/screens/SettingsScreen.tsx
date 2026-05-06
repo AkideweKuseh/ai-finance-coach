@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Switch,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenContainer } from "../components/common/ScreenContainer";
@@ -39,6 +40,7 @@ const SettingsScreen = () => {
   const themedColors = useThemedColors();
   const { showAlert } = useAlertStore();
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const spendingAlerts = user?.userPrefs?.spendingAlerts ?? true;
   const weeklyReport   = user?.userPrefs?.weeklyReport   ?? true;
@@ -61,12 +63,15 @@ const SettingsScreen = () => {
         text: "Logout",
         style: "destructive",
         onPress: async () => {
+          setIsLoggingOut(true);
           try {
             await authApi.logout();
             await clearTokens();
             clearUser();
           } catch (error) {
             console.error("Logout error:", error);
+          } finally {
+            setIsLoggingOut(false);
           }
         },
       },
@@ -363,23 +368,25 @@ const SettingsScreen = () => {
             <TouchableOpacity
               style={[styles.settingRow, styles.logoutRow]}
               onPress={handleLogout}
+              disabled={isLoggingOut}
             >
               <View style={styles.settingLeft}>
                 <Text style={styles.settingEmoji}>🚪</Text>
                 <Text style={styles.logoutText}>Log Out</Text>
               </View>
+              {isLoggingOut && <ActivityIndicator size="small" color={colors.error} />}
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <View
-            style={[styles.appIcon, { backgroundColor: themedColors.surface }]}
-          >
+          <View style={[styles.appIcon, { backgroundColor: colors.primary }]}>
             <Ionicons name="wallet" size={24} color="#FFFFFF" />
           </View>
-          <Text style={styles.versionText}>AI Financial Coach v2.0.0</Text>
+          <Text style={[styles.versionText, { color: themedColors.textSecondary }]}>
+            Thrive v2.0.0
+          </Text>
         </View>
 
         <View style={{ height: 40 }} />
@@ -546,7 +553,6 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: 12,
-    color: "rgba(255, 255, 255, 0.3)",
     fontWeight: "500",
     fontFamily: typography.fontFamily.body,
   },

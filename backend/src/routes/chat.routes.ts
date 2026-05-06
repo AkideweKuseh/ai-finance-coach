@@ -7,6 +7,7 @@ import {
   listConversations,
   createConversation,
   sendMessage,
+  sendMessageStream,
   getConversation,
   clearConversation,
 } from "../controllers/chat.controller";
@@ -19,6 +20,7 @@ router.use(authenticate);
 router.get("/conversations", listConversations);
 router.post("/conversations", createConversation);
 router.post("/message", sendMessage);
+router.post("/message-stream", sendMessageStream);
 router.get("/conversation/:conversationId", getConversation);
 router.delete("/conversation/:conversationId", clearConversation);
 

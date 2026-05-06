@@ -3,16 +3,19 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
+  Animated,
+  Easing,
+  Dimensions,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
+  ScrollView,
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, spacing, useThemedColors } from "../theme";
 import { useUserStore } from "../stores/userStore";
 import { useAlertStore } from "../stores/alertStore";
@@ -25,8 +28,9 @@ import {
 } from "../utils/currency";
 import { LineChart } from "react-native-chart-kit";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const TOTAL_STEPS = 7;
 
 type FinancialGoal = "save_emergency" | "pay_debt" | "invest" | "budget_control";
 type RiskTolerance = "conservative" | "moderate" | "aggressive";
@@ -41,145 +45,195 @@ interface Answers {
   categories: string[];
 }
 
-interface ChatMessage {
-  id: string;
-  text: string;
-  isCoach: boolean;
-}
-
-const GOAL_OPTIONS = [
-  { value: "save_emergency" as FinancialGoal, label: "Emergency Fund", icon: "shield-checkmark" as const },
-  { value: "pay_debt" as FinancialGoal, label: "Pay Off Debt", icon: "trending-down" as const },
-  { value: "invest" as FinancialGoal, label: "Invest Wealth", icon: "trending-up" as const },
-  { value: "budget_control" as FinancialGoal, label: "Budget Control", icon: "wallet" as const },
+const GOAL_OPTIONS: { value: FinancialGoal; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { value: "save_emergency", label: "Emergency Fund", icon: "shield-checkmark", color: colors.primary },
+  { value: "pay_debt",       label: "Pay Off Debt",   icon: "trending-down",    color: colors.error },
+  { value: "invest",         label: "Invest Wealth",  icon: "trending-up",      color: colors.success },
+  { value: "budget_control", label: "Budget Control", icon: "wallet",           color: colors.accent },
 ];
 
-const RISK_OPTIONS = [
-  { value: "conservative" as RiskTolerance, label: "Conservative", emoji: "🛡️" },
-  { value: "moderate" as RiskTolerance, label: "Moderate", emoji: "⚖️" },
-  { value: "aggressive" as RiskTolerance, label: "Aggressive", emoji: "🚀" },
+const RISK_OPTIONS: { value: RiskTolerance; label: string; emoji: string; desc: string }[] = [
+  { value: "conservative", label: "Conservative", emoji: "🛡️", desc: "Low risk, steady growth" },
+  { value: "moderate",     label: "Moderate",     emoji: "⚖️", desc: "Balanced approach" },
+  { value: "aggressive",   label: "Aggressive",   emoji: "🚀", desc: "High risk, high reward" },
 ];
 
-const CATEGORY_OPTIONS = ["Food", "Transport", "Health", "Shopping", "Bills", "Fun"];
+const CATEGORY_OPTIONS = [
+  { label: "Food",      emoji: "🍔" },
+  { label: "Transport", emoji: "🚌" },
+  { label: "Health",    emoji: "💊" },
+  { label: "Shopping",  emoji: "🛍️" },
+  { label: "Bills",     emoji: "💡" },
+  { label: "Fun",       emoji: "🎮" },
+];
 
 const GOAL_NAMES: Record<FinancialGoal, string> = {
   save_emergency: "Emergency Fund",
-  pay_debt: "Debt Freedom",
-  invest: "Wealth Building",
+  pay_debt:       "Debt Freedom",
+  invest:         "Wealth Building",
   budget_control: "Budget Mastery",
 };
+
+const ANALYSIS_STEPS = [
+  "Mapping your income...",
+  "Calculating daily budget...",
+  "Aligning your goals...",
+  "Building your plan...",
+];
+
+// ─── Progress bar ─────────────────────────────────────────────────────────────
+
+const ProgressBar = ({ step, themedColors }: { step: number; themedColors: any }) => (
+  <View style={pb.row}>
+    {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+      <View key={i} style={[pb.seg, { backgroundColor: i <= step ? colors.primary : themedColors.border }]} />
+    ))}
+  </View>
+);
+const pb = StyleSheet.create({
+  row: { flexDirection: "row", gap: 4, flex: 1 },
+  seg: { flex: 1, height: 3, borderRadius: 2 },
+});
+
+// ─── Helper sub-components ────────────────────────────────────────────────────
+
+const QuestionCard = ({
+  question, sub, children, themedColors,
+}: {
+  question: string; sub: string; children: React.ReactNode; themedColors: any;
+}) => (
+  <View style={styles.questionCard}>
+    <View style={styles.questionText}>
+      <Text style={[styles.question, { color: themedColors.textPrimary }]}>{question}</Text>
+      <Text style={[styles.questionSub, { color: themedColors.textSecondary }]}>{sub}</Text>
+    </View>
+    <View style={styles.inputArea}>{children}</View>
+  </View>
+);
+
+const AmountInput = ({
+  symbol, value, onChange, onSubmit, themedColors, placeholder,
+}: {
+  symbol: string; value: string; onChange: (v: string) => void;
+  onSubmit: () => void; themedColors: any; placeholder?: string;
+}) => (
+  <View style={styles.amountRow}>
+    {!!symbol && <Text style={[styles.amountSymbol, { color: colors.primary }]}>{symbol}</Text>}
+    <TextInput
+      value={value}
+      onChangeText={onChange}
+      keyboardType="numeric"
+      placeholder={placeholder ?? "0"}
+      placeholderTextColor={themedColors.textSecondary}
+      style={[styles.amountInput, { color: themedColors.textPrimary, borderBottomColor: colors.primary }]}
+      returnKeyType="done"
+      onSubmitEditing={onSubmit}
+      autoFocus
+    />
+  </View>
+);
+
+const NextBtn = ({ onPress, label = "Continue" }: { onPress: () => void; label?: string }) => (
+  <TouchableOpacity style={[styles.nextBtn, { backgroundColor: colors.primary }]} onPress={onPress}>
+    <Text style={styles.nextBtnText}>{label}</Text>
+    <Ionicons name="arrow-forward" size={18} color="#fff" />
+  </TouchableOpacity>
+);
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 const OnboardingScreen = () => {
   const themedColors = useThemedColors();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { user, setUser } = useUserStore();
   const { showAlert } = useAlertStore();
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentStep, setCurrentStep] = useState(-1);
+  const [step, setStep] = useState(0);           // 0-6 = questions, 7 = analyzing, 8 = results
   const [answers, setAnswers] = useState<Partial<Answers>>({});
   const [inputValue, setInputValue] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
-  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
-  const scrollRef = useRef<ScrollView>(null);
+  const slideX = useRef(new Animated.Value(SCREEN_WIDTH)).current;
 
-  const addMessage = (text: string, isCoach: boolean) => {
-    const id = `msg-${Date.now()}-${Math.random()}`;
-    setMessages((prev) => [...prev, { id, text, isCoach }]);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+  const symbol = getCurrencySymbol(answers.currency ?? "USD");
+
+  const slideIn = () => {
+    slideX.setValue(SCREEN_WIDTH);
+    Animated.timing(slideX, {
+      toValue: 0,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
   };
 
-  const getStepPrompt = (step: number, ans: Partial<Answers>): string => {
-    const symbol = getCurrencySymbol(ans.currency ?? "USD");
-    switch (step) {
-      case 0: return `Hi ${user?.name?.split(" ")[0] ?? "there"}! I'm your AI Finance Coach. Let's set up your profile. First — what currency do you use?`;
-      case 1: return `Great choice! What's your monthly income? (${symbol})`;
-      case 2: return `How much do you want to save each month? (${symbol})`;
-      case 3: return "How old are you?";
-      case 4: return "What's your main financial goal right now?";
-      case 5: return "How do you feel about financial risk?";
-      case 6: return "Which categories do you usually spend on? (select all that apply)";
-      default: return "";
-    }
+  const advance = (newAnswers: Partial<Answers>, nextStep: number) => {
+    setAnswers(newAnswers);
+    Animated.timing(slideX, {
+      toValue: -SCREEN_WIDTH,
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      setInputValue("");
+      setStep(nextStep);
+      slideIn();
+    });
   };
 
-  // Show first message on mount
+  useEffect(() => { slideIn(); }, []);
+
+  // Fake analysis progress
   useEffect(() => {
-    setTimeout(() => {
-      addMessage(getStepPrompt(0, {}), true);
-      setCurrentStep(0);
-    }, 400);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const advanceToStep = (newAnswers: Partial<Answers>, userText: string, nextStep: number) => {
-    addMessage(userText, false);
-    setTimeout(() => {
-      if (nextStep <= 6) {
-        addMessage(getStepPrompt(nextStep, newAnswers), true);
-        setCurrentStep(nextStep);
-        setInputValue("");
-      } else {
-        addMessage("Here's your personalised financial snapshot 👇", true);
-        setTimeout(() => setShowAnalysis(true), 600);
-        setCurrentStep(7);
+    if (step !== 7) return;
+    let i = 0;
+    const interval = setInterval(() => {
+      i += 1;
+      setAnalysisStep(i);
+      if (i >= ANALYSIS_STEPS.length) {
+        clearInterval(interval);
+        setTimeout(() => {
+          setStep(8);
+          slideIn();
+        }, 700);
       }
-    }, 600);
+    }, 700);
+    return () => clearInterval(interval);
+  }, [step]);
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+
+  const handleBack = () => {
+    if (step === 0) return;
+    slideX.setValue(-SCREEN_WIDTH);
+    Animated.timing(slideX, {
+      toValue: 0,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+    setStep((s) => s - 1);
   };
 
-  const handleNumberInput = () => {
+  const handleNumberNext = () => {
     const val = parseFloat(inputValue);
-    if (isNaN(val) || val < 0) {
-      showAlert("Invalid", "Please enter a valid number.");
-      return;
-    }
-    if (currentStep === 3 && (val < 13 || val > 120)) {
-      showAlert("Invalid", "Please enter an age between 13 and 120.");
-      return;
-    }
-    const key = currentStep === 1 ? "income" : currentStep === 2 ? "savings" : "age";
-    const newAnswers = { ...answers, [key]: currentStep === 3 ? Math.round(val) : val };
-    setAnswers(newAnswers);
-    advanceToStep(newAnswers, inputValue, currentStep + 1);
+    if (isNaN(val) || val < 0) { showAlert("Invalid", "Please enter a valid number."); return; }
+    if (step === 3 && (val < 13 || val > 120)) { showAlert("Invalid", "Age must be between 13 and 120."); return; }
+    const key = step === 1 ? "income" : step === 2 ? "savings" : "age";
+    advance({ ...answers, [key]: step === 3 ? Math.round(val) : val }, step + 1);
   };
 
-  const handleCurrencySelect = (code: string) => {
-    const newAnswers = { ...answers, currency: code };
-    setAnswers(newAnswers);
-    advanceToStep(newAnswers, code, 1);
-  };
-
-  const handleGoalSelect = (goal: FinancialGoal, label: string) => {
-    const newAnswers = { ...answers, goal };
-    setAnswers(newAnswers);
-    advanceToStep(newAnswers, label, 5);
-  };
-
-  const handleRiskSelect = (risk: RiskTolerance, label: string) => {
-    const newAnswers = { ...answers, risk };
-    setAnswers(newAnswers);
-    advanceToStep(newAnswers, label, 6);
-  };
-
-  const handleCategoryToggle = (cat: string) => {
-    const current = answers.categories ?? [];
-    const next = current.includes(cat)
-      ? current.filter((c) => c !== cat)
-      : [...current, cat];
-    setAnswers((prev) => ({ ...prev, categories: next }));
-  };
+  const handleCurrencySelect = (code: string) => { advance({ ...answers, currency: code }, 1); };
+  const handleGoalSelect = (goal: FinancialGoal) => { advance({ ...answers, goal }, 5); };
+  const handleRiskSelect = (risk: RiskTolerance) => { advance({ ...answers, risk }, 6); };
 
   const handleCategoriesDone = () => {
-    const cats = answers.categories ?? [];
-    if (cats.length === 0) {
-      showAlert("Select at least one", "Pick at least one spending category.");
-      return;
-    }
-    const newAnswers = { ...answers, categories: cats };
-    setAnswers(newAnswers);
-    advanceToStep(newAnswers, cats.join(", "), 7);
+    if (selectedCategories.length === 0) { showAlert("Select at least one", "Pick at least one spending category."); return; }
+    advance({ ...answers, categories: selectedCategories }, 7);
   };
 
   const handleComplete = async () => {
@@ -200,7 +254,7 @@ const OnboardingScreen = () => {
         hasCompletedOnboarding: true,
       } as any);
       setUser(updated);
-      navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+      // AppNavigator re-renders automatically when hasCompletedOnboarding becomes true
     } catch {
       showAlert("Error", "Failed to save your profile. Please try again.");
     } finally {
@@ -208,223 +262,286 @@ const OnboardingScreen = () => {
     }
   };
 
-  const renderInput = () => {
-    if (currentStep === 0) {
-      return (
-        <TouchableOpacity
-          style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-          onPress={() => setShowCurrencyPicker(true)}
-        >
-          <Text style={styles.primaryBtnText}>Choose Currency</Text>
-        </TouchableOpacity>
-      );
-    }
-    if (currentStep >= 1 && currentStep <= 3) {
-      return (
-        <View style={styles.inputRow}>
-          <TextInput
-            value={inputValue}
-            onChangeText={setInputValue}
-            keyboardType="numeric"
-            placeholder={currentStep === 3 ? "Your age" : "Enter amount"}
-            placeholderTextColor={themedColors.textSecondary}
-            style={[styles.textInput, {
-              color: themedColors.textPrimary,
-              borderColor: colors.primary,
-              backgroundColor: themedColors.surface,
-            }]}
-            returnKeyType="done"
-            onSubmitEditing={handleNumberInput}
-            autoFocus
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, { backgroundColor: colors.primary }]}
-            onPress={handleNumberInput}
+  // ── Question renderer ─────────────────────────────────────────────────────
+
+  const renderQuestion = () => {
+    switch (step) {
+      case 0:
+        return (
+          <QuestionCard
+            question="What currency do you use?"
+            sub="This personalises all amounts across the app."
+            themedColors={themedColors}
           >
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      );
-    }
-    if (currentStep === 4) {
-      return (
-        <View style={styles.chipsGrid}>
-          {GOAL_OPTIONS.map((opt) => (
             <TouchableOpacity
-              key={opt.value}
-              style={[styles.chip, { backgroundColor: themedColors.surface, borderColor: themedColors.border }]}
-              onPress={() => handleGoalSelect(opt.value, opt.label)}
+              style={[styles.currencyBtn, { backgroundColor: themedColors.surface, borderColor: colors.primary }]}
+              onPress={() => setShowCurrencyPicker(true)}
             >
-              <Ionicons name={opt.icon} size={18} color={colors.primary} />
-              <Text style={[styles.chipText, { color: themedColors.textPrimary }]}>{opt.label}</Text>
+              <Text style={[styles.currencyBtnSymbol, { color: colors.primary }]}>
+                {answers.currency ? getCurrencySymbol(answers.currency) : "¤"}
+              </Text>
+              <Text style={[styles.currencyBtnText, { color: themedColors.textPrimary }]}>
+                {answers.currency ?? "Choose currency"}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={themedColors.textSecondary} />
             </TouchableOpacity>
-          ))}
-        </View>
-      );
-    }
-    if (currentStep === 5) {
-      return (
-        <View style={styles.chipsRow}>
-          {RISK_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.chip, { backgroundColor: themedColors.surface, borderColor: themedColors.border, flex: 1 }]}
-              onPress={() => handleRiskSelect(opt.value, opt.label)}
-            >
-              <Text style={{ fontSize: 22 }}>{opt.emoji}</Text>
-              <Text style={[styles.chipText, { color: themedColors.textPrimary }]}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      );
-    }
-    if (currentStep === 6) {
-      const selected = answers.categories ?? [];
-      return (
-        <View>
-          <View style={styles.chipsWrap}>
-            {CATEGORY_OPTIONS.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                style={[
-                  styles.chip,
-                  { backgroundColor: themedColors.surface, borderColor: themedColors.border },
-                  selected.includes(cat) && { backgroundColor: colors.primary, borderColor: colors.primary },
-                ]}
-                onPress={() => handleCategoryToggle(cat)}
-              >
-                <Text style={[
-                  styles.chipText,
-                  { color: selected.includes(cat) ? "#fff" : themedColors.textPrimary },
-                ]}>{cat}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <TouchableOpacity
-            style={[styles.primaryBtn, { backgroundColor: colors.primary, marginTop: 12 }]}
-            onPress={handleCategoriesDone}
+          </QuestionCard>
+        );
+
+      case 1:
+        return (
+          <QuestionCard
+            question="What's your monthly income?"
+            sub={`After tax, in ${answers.currency ?? "your currency"}.`}
+            themedColors={themedColors}
           >
-            <Text style={styles.primaryBtnText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-      );
+            <AmountInput symbol={symbol} value={inputValue} onChange={setInputValue} onSubmit={handleNumberNext} themedColors={themedColors} />
+            <NextBtn onPress={handleNumberNext} />
+          </QuestionCard>
+        );
+
+      case 2:
+        return (
+          <QuestionCard
+            question="How much do you want to save each month?"
+            sub="The rest becomes your daily spending budget."
+            themedColors={themedColors}
+          >
+            <AmountInput symbol={symbol} value={inputValue} onChange={setInputValue} onSubmit={handleNumberNext} themedColors={themedColors} />
+            <NextBtn onPress={handleNumberNext} />
+          </QuestionCard>
+        );
+
+      case 3:
+        return (
+          <QuestionCard
+            question="How old are you?"
+            sub="Helps us tailor advice to your life stage."
+            themedColors={themedColors}
+          >
+            <AmountInput symbol="" value={inputValue} onChange={setInputValue} onSubmit={handleNumberNext} themedColors={themedColors} placeholder="Your age" />
+            <NextBtn onPress={handleNumberNext} />
+          </QuestionCard>
+        );
+
+      case 4:
+        return (
+          <QuestionCard
+            question="What's your main financial goal?"
+            sub="Tap to select — we'll build a plan around it."
+            themedColors={themedColors}
+          >
+            <View style={styles.goalGrid}>
+              {GOAL_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.goalCard, { backgroundColor: themedColors.surface, borderColor: themedColors.border }]}
+                  onPress={() => handleGoalSelect(opt.value)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.goalIcon, { backgroundColor: opt.color + "20" }]}>
+                    <Ionicons name={opt.icon} size={26} color={opt.color} />
+                  </View>
+                  <Text style={[styles.goalLabel, { color: themedColors.textPrimary }]}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </QuestionCard>
+        );
+
+      case 5:
+        return (
+          <QuestionCard
+            question="How do you feel about financial risk?"
+            sub="There's no wrong answer — be honest."
+            themedColors={themedColors}
+          >
+            <View style={styles.riskList}>
+              {RISK_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.riskCard, { backgroundColor: themedColors.surface, borderColor: themedColors.border }]}
+                  onPress={() => handleRiskSelect(opt.value)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.riskEmoji}>{opt.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.riskLabel, { color: themedColors.textPrimary }]}>{opt.label}</Text>
+                    <Text style={[styles.riskDesc, { color: themedColors.textSecondary }]}>{opt.desc}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={themedColors.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </QuestionCard>
+        );
+
+      case 6:
+        return (
+          <QuestionCard
+            question="Which categories do you spend on?"
+            sub="Select all that apply."
+            themedColors={themedColors}
+          >
+            <View style={styles.catWrap}>
+              {CATEGORY_OPTIONS.map((cat) => {
+                const sel = selectedCategories.includes(cat.label);
+                return (
+                  <TouchableOpacity
+                    key={cat.label}
+                    style={[
+                      styles.catChip,
+                      { borderColor: themedColors.border, backgroundColor: themedColors.surface },
+                      sel && { backgroundColor: colors.primary, borderColor: colors.primary },
+                    ]}
+                    onPress={() => setSelectedCategories((prev) =>
+                      prev.includes(cat.label) ? prev.filter((c) => c !== cat.label) : [...prev, cat.label]
+                    )}
+                  >
+                    <Text style={styles.catEmoji}>{cat.emoji}</Text>
+                    <Text style={[styles.catLabel, { color: sel ? "#fff" : themedColors.textPrimary }]}>{cat.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <NextBtn onPress={handleCategoriesDone} label="Done" />
+          </QuestionCard>
+        );
+
+      default:
+        return null;
     }
-    return null;
   };
 
-  const renderAnalysisCard = () => {
-    if (!showAnalysis) return null;
+  // ── Analysis result card ──────────────────────────────────────────────────
+
+  const renderAnalysis = () => {
     const a = answers as Answers;
-    const symbol = getCurrencySymbol(a.currency);
+    const sym = getCurrencySymbol(a.currency);
     const projData = generateProjectionData(a.savings);
-    const dailyBudget = Math.round(a.income / 30);
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const dailyBudget = Math.round(Math.max(0, a.income - a.savings) / daysInMonth);
     const timeline = getGoalTimelineLabel(a.goal, a.income, a.savings);
-    const riskLabel = a.risk.charAt(0).toUpperCase() + a.risk.slice(1);
     const annualSavings = a.savings * 12;
-    const coachMsg = `Based on your income, you can save ${symbol}${annualSavings.toLocaleString()} this year toward your ${GOAL_NAMES[a.goal]} goal. ${timeline.startsWith("~") ? `At this rate you'll reach it in ${timeline} — let's make it happen!` : `Your coach will help you map the path — let's get started!`}`;
+    const coachMsg = `You can save ${sym}${annualSavings.toLocaleString()} this year toward your ${GOAL_NAMES[a.goal]} goal. ${timeline.startsWith("~") ? `At this rate you'll reach it in ${timeline} — let's make it happen!` : "Your coach will map the exact path — let's get started!"}`;
 
     return (
-      <View style={[styles.analysisCard, { backgroundColor: themedColors.surface }]}>
-        <Text style={[styles.analysisTitle, { color: themedColors.textPrimary }]}>
-          Your 12-Month Savings Projection
-        </Text>
-        <LineChart
-          data={{ labels: MONTH_LABELS, datasets: [{ data: projData }] }}
-          width={SCREEN_WIDTH - 80}
-          height={160}
-          chartConfig={{
-            backgroundGradientFrom: themedColors.surface,
-            backgroundGradientTo: themedColors.surface,
-            decimalPlaces: 0,
-            color: () => colors.primary,
-            labelColor: () => themedColors.textSecondary,
-            propsForDots: { r: "3", strokeWidth: "2", stroke: colors.primary },
-          }}
-          bezier
-          style={{ borderRadius: 12, marginVertical: 8 }}
-        />
+      <ScrollView contentContainerStyle={[styles.analysisScroll, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.analysisTitle, { color: themedColors.textPrimary }]}>Your Financial Snapshot 📊</Text>
+        <Text style={[styles.analysisSub, { color: themedColors.textSecondary }]}>Based on your answers</Text>
+
+        <View style={[styles.chartCard, { backgroundColor: themedColors.surface }]}>
+          <Text style={[styles.chartTitle, { color: themedColors.textPrimary }]}>12-Month Savings Projection</Text>
+          <LineChart
+            data={{ labels: MONTH_LABELS, datasets: [{ data: projData }] }}
+            width={SCREEN_WIDTH - 80}
+            height={150}
+            chartConfig={{
+              backgroundGradientFrom: themedColors.surface,
+              backgroundGradientTo: themedColors.surface,
+              decimalPlaces: 0,
+              color: () => colors.primary,
+              labelColor: () => themedColors.textSecondary,
+              propsForDots: { r: "3", strokeWidth: "2", stroke: colors.primary },
+            }}
+            bezier
+            style={{ borderRadius: 12, marginTop: 8 }}
+          />
+        </View>
+
         <View style={styles.statRow}>
           {[
-            { emoji: "💰", label: "Daily Budget", value: `${symbol}${dailyBudget}` },
+            { emoji: "💰", label: "Daily Budget", value: `${sym}${dailyBudget}` },
             { emoji: "🎯", label: "Goal Timeline", value: timeline },
-            { emoji: "📊", label: "Risk Profile", value: riskLabel },
-          ].map((stat) => (
-            <View key={stat.label} style={[styles.statCard, { backgroundColor: themedColors.background }]}>
-              <Text style={{ fontSize: 20 }}>{stat.emoji}</Text>
-              <Text style={[styles.statLabel, { color: themedColors.textSecondary }]}>{stat.label}</Text>
-              <Text style={[styles.statValue, { color: themedColors.textPrimary }]}>{stat.value}</Text>
+            { emoji: "📊", label: "Risk Profile", value: a.risk.charAt(0).toUpperCase() + a.risk.slice(1) },
+          ].map((s) => (
+            <View key={s.label} style={[styles.statCard, { backgroundColor: themedColors.surface }]}>
+              <Text style={{ fontSize: 22 }}>{s.emoji}</Text>
+              <Text style={[styles.statLabel, { color: themedColors.textSecondary }]}>{s.label}</Text>
+              <Text style={[styles.statValue, { color: themedColors.textPrimary }]}>{s.value}</Text>
             </View>
           ))}
         </View>
-        <Text style={[styles.coachMsg, { color: themedColors.textSecondary }]}>{coachMsg}</Text>
-        <TouchableOpacity
-          style={[styles.primaryBtn, { backgroundColor: colors.primary, marginTop: 16 }]}
-          onPress={handleComplete}
-          disabled={isSaving}
-        >
-          {isSaving
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.primaryBtnText}>Let's Start 🚀</Text>
-          }
+
+        <View style={[styles.coachCard, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}40` }]}>
+          <View style={[styles.coachAvatar, { backgroundColor: colors.primary }]}>
+            <Ionicons name="sparkles" size={16} color="#fff" />
+          </View>
+          <Text style={[styles.coachMsg, { color: themedColors.textPrimary }]}>{coachMsg}</Text>
+        </View>
+
+        <TouchableOpacity style={[styles.startBtn, { backgroundColor: colors.primary }]} onPress={handleComplete} disabled={isSaving}>
+          {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.startBtnText}>Let's Start 🚀</Text>}
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     );
   };
 
+  // ── Root render ───────────────────────────────────────────────────────────
+
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: themedColors.background }]}
+      style={[styles.root, { backgroundColor: themedColors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={20}
     >
-      <View style={[styles.header, { borderBottomColor: themedColors.border }]}>
-        <View style={[styles.avatarDot, { backgroundColor: colors.primary }]}>
-          <Ionicons name="sparkles" size={18} color="#fff" />
-        </View>
-        <Text style={[styles.headerTitle, { color: themedColors.textPrimary }]}>AI Finance Coach</Text>
-      </View>
+      {/* Status bar safe area */}
+      <View style={{ height: insets.top, backgroundColor: themedColors.background }} />
 
-      <ScrollView
-        ref={scrollRef}
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        {messages.map((msg) => (
-          <View key={msg.id} style={[styles.bubbleRow, msg.isCoach ? styles.coachRow : styles.userRow]}>
-            {msg.isCoach && (
-              <View style={[styles.miniAvatar, { backgroundColor: colors.primary }]}>
-                <Ionicons name="sparkles" size={10} color="#fff" />
-              </View>
-            )}
-            <View style={[
-              styles.bubble,
-              msg.isCoach
-                ? [styles.coachBubble, { backgroundColor: themedColors.surface }]
-                : [styles.userBubble, { backgroundColor: colors.primary }],
-            ]}>
-              <Text style={[
-                styles.bubbleText,
-                { color: msg.isCoach ? themedColors.textPrimary : "#fff" },
-              ]}>
-                {msg.text}
-              </Text>
-            </View>
-          </View>
-        ))}
-
-        {showAnalysis && renderAnalysisCard()}
-        <View style={{ height: 20 }} />
-      </ScrollView>
-
-      {currentStep >= 0 && currentStep <= 6 && (
-        <View style={[styles.inputArea, {
-          borderTopColor: themedColors.border,
-          backgroundColor: themedColors.background,
-        }]}>
-          {renderInput()}
+      {/* Header — only during questions */}
+      {step < 7 && (
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={handleBack} disabled={step === 0}>
+            <Ionicons name="chevron-back" size={24} color={step === 0 ? "transparent" : themedColors.textPrimary} />
+          </TouchableOpacity>
+          <ProgressBar step={step} themedColors={themedColors} />
+          <Text style={[styles.stepCount, { color: themedColors.textSecondary }]}>
+            {step + 1}/{TOTAL_STEPS}
+          </Text>
         </View>
       )}
+
+      {/* Question card (animated slide) */}
+      {step < 7 && (
+        <Animated.View style={[styles.cardArea, { transform: [{ translateX: slideX }] }]}>
+          {renderQuestion()}
+        </Animated.View>
+      )}
+
+      {/* Analysing screen */}
+      {step === 7 && (
+        <View style={styles.analyzingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginBottom: 24 }} />
+          <Text style={[styles.analyzingTitle, { color: themedColors.textPrimary }]}>
+            Analysing your profile...
+          </Text>
+          <View style={styles.analyzeSteps}>
+            {ANALYSIS_STEPS.map((s, i) => (
+              <View key={i} style={styles.analyzeRow}>
+                {i < analysisStep
+                  ? <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  : i === analysisStep
+                    ? <ActivityIndicator size="small" color={colors.primary} />
+                    : <View style={[styles.analyzeCircle, { borderColor: themedColors.border }]} />
+                }
+                <Text style={[styles.analyzeText, { color: i < analysisStep ? colors.success : themedColors.textSecondary }]}>
+                  {s}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Analysis results */}
+      {step === 8 && (
+        <Animated.View style={[{ flex: 1 }, { transform: [{ translateX: slideX }] }]}>
+          {renderAnalysis()}
+        </Animated.View>
+      )}
+
+      {/* Bottom safe area (only during questions — analysis card handles its own) */}
+      {step < 7 && <View style={{ height: insets.bottom }} />}
 
       <CurrencyPicker
         visible={showCurrencyPicker}
@@ -436,38 +553,78 @@ const OnboardingScreen = () => {
   );
 };
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, gap: 10 },
-  avatarDot: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 17, fontWeight: "700", fontFamily: "RobotoMono-Bold" },
-  scrollContent: { padding: 16, paddingBottom: 8 },
-  bubbleRow: { flexDirection: "row", marginBottom: 12, gap: 8 },
-  coachRow: { alignItems: "flex-end" },
-  userRow: { flexDirection: "row-reverse" },
-  miniAvatar: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", marginTop: 4 },
-  bubble: { maxWidth: "80%", padding: 12, borderRadius: 16 },
-  coachBubble: { borderTopLeftRadius: 4 },
-  userBubble: { borderTopRightRadius: 4 },
-  bubbleText: { fontSize: 14, lineHeight: 20, fontFamily: "RobotoMono-Regular" },
-  inputArea: { padding: 16, borderTopWidth: 1 },
-  inputRow: { flexDirection: "row", gap: 8 },
-  textInput: { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 16, fontFamily: "RobotoMono-Regular" },
-  sendBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  primaryBtn: { borderRadius: 30, paddingVertical: 14, alignItems: "center" },
-  primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16, fontFamily: "RobotoMono-Bold" },
-  chipsGrid: { gap: 8 },
-  chipsRow: { flexDirection: "row", gap: 8 },
-  chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { borderWidth: 1.5, borderRadius: 12, padding: 12, alignItems: "center", gap: 6 },
-  chipText: { fontSize: 13, fontWeight: "600", fontFamily: "RobotoMono-Bold" },
-  analysisCard: { borderRadius: 20, padding: 16, marginTop: 8 },
-  analysisTitle: { fontSize: 16, fontWeight: "700", fontFamily: "RobotoMono-Bold", marginBottom: 4 },
-  statRow: { flexDirection: "row", gap: 8, marginTop: 8 },
-  statCard: { flex: 1, borderRadius: 12, padding: 10, alignItems: "center", gap: 4 },
-  statLabel: { fontSize: 9, fontWeight: "600", textTransform: "uppercase", fontFamily: "RobotoMono-Regular" },
-  statValue: { fontSize: 13, fontWeight: "700", textAlign: "center", fontFamily: "RobotoMono-Bold" },
-  coachMsg: { fontSize: 13, lineHeight: 20, marginTop: 12, fontFamily: "RobotoMono-Regular" },
+  root: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+  backBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  stepCount: { fontSize: 12, fontFamily: "RobotoMono-Regular", minWidth: 36, textAlign: "right" },
+  cardArea: { flex: 1 },
+
+  // Question layout
+  questionCard: { flex: 1, paddingHorizontal: 24 },
+  questionText: { paddingTop: 32, paddingBottom: 40 },
+  question: { fontSize: 26, fontWeight: "700", fontFamily: "RobotoMono-Bold", lineHeight: 34, marginBottom: 10 },
+  questionSub: { fontSize: 14, fontFamily: "RobotoMono-Regular", lineHeight: 20 },
+  inputArea: { gap: 12 },
+
+  // Currency button
+  currencyBtn: { flexDirection: "row", alignItems: "center", borderWidth: 2, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 18, gap: 12 },
+  currencyBtnSymbol: { fontSize: 24, fontWeight: "700", width: 32, textAlign: "center" },
+  currencyBtnText: { flex: 1, fontSize: 16, fontFamily: "RobotoMono-Bold" },
+
+  // Amount input
+  amountRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingBottom: 8 },
+  amountSymbol: { fontSize: 36, fontWeight: "700", fontFamily: "RobotoMono-Bold", marginBottom: 6 },
+  amountInput: { flex: 1, fontSize: 36, fontWeight: "700", fontFamily: "RobotoMono-Bold", borderBottomWidth: 2, paddingBottom: 6 },
+
+  // Next button
+  nextBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 30, paddingVertical: 16, marginTop: 12 },
+  nextBtnText: { color: "#fff", fontSize: 16, fontWeight: "700", fontFamily: "RobotoMono-Bold" },
+
+  // Goal grid
+  goalGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  goalCard: { width: (SCREEN_WIDTH - 48 - 12) / 2, borderRadius: 16, borderWidth: 1.5, padding: 20, alignItems: "center", gap: 12 },
+  goalIcon: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
+  goalLabel: { fontSize: 13, fontWeight: "700", fontFamily: "RobotoMono-Bold", textAlign: "center" },
+
+  // Risk list
+  riskList: { gap: 12 },
+  riskCard: { flexDirection: "row", alignItems: "center", borderRadius: 16, borderWidth: 1.5, padding: 16, gap: 14 },
+  riskEmoji: { fontSize: 28 },
+  riskLabel: { fontSize: 15, fontWeight: "700", fontFamily: "RobotoMono-Bold" },
+  riskDesc: { fontSize: 12, fontFamily: "RobotoMono-Regular", marginTop: 2 },
+
+  // Categories
+  catWrap: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 8 },
+  catChip: { flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderRadius: 30, paddingHorizontal: 14, paddingVertical: 10, gap: 6 },
+  catEmoji: { fontSize: 16 },
+  catLabel: { fontSize: 13, fontWeight: "600", fontFamily: "RobotoMono-Bold" },
+
+  // Analysing
+  analyzingContainer: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
+  analyzingTitle: { fontSize: 22, fontWeight: "700", fontFamily: "RobotoMono-Bold", marginBottom: 32, textAlign: "center" },
+  analyzeSteps: { gap: 16, width: "100%" },
+  analyzeRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  analyzeCircle: { width: 20, height: 20, borderRadius: 10, borderWidth: 2 },
+  analyzeText: { fontSize: 14, fontFamily: "RobotoMono-Regular" },
+
+  // Analysis result
+  analysisScroll: { padding: 24 },
+  analysisTitle: { fontSize: 22, fontWeight: "700", fontFamily: "RobotoMono-Bold", marginBottom: 4 },
+  analysisSub: { fontSize: 13, fontFamily: "RobotoMono-Regular", marginBottom: 20 },
+  chartCard: { borderRadius: 20, padding: 16, marginBottom: 16 },
+  chartTitle: { fontSize: 14, fontWeight: "700", fontFamily: "RobotoMono-Bold" },
+  statRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  statCard: { flex: 1, borderRadius: 14, padding: 12, alignItems: "center", gap: 4 },
+  statLabel: { fontSize: 9, textTransform: "uppercase", fontFamily: "RobotoMono-Regular", textAlign: "center" },
+  statValue: { fontSize: 13, fontWeight: "700", fontFamily: "RobotoMono-Bold", textAlign: "center" },
+  coachCard: { borderRadius: 16, borderWidth: 1, padding: 16, flexDirection: "row", gap: 12, alignItems: "flex-start", marginBottom: 20 },
+  coachAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  coachMsg: { flex: 1, fontSize: 13, lineHeight: 20, fontFamily: "RobotoMono-Regular" },
+  startBtn: { borderRadius: 30, paddingVertical: 16, alignItems: "center" },
+  startBtnText: { color: "#fff", fontSize: 16, fontWeight: "700", fontFamily: "RobotoMono-Bold" },
 });
 
 export default OnboardingScreen;

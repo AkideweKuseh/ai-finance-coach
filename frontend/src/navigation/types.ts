@@ -16,6 +16,8 @@ export type RootStackParamList = {
   ChatInterface: { conversationId: string };
   Onboarding: undefined;
   WeeklyReport: { reportId: string };
+  Notifications: undefined;
+  NotificationDetail: { notificationId: string };
 };
 
 export type AuthStackParamList = {

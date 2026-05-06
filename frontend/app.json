@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AI Finance Coach",
+    "name": "Thrive",
     "slug": "ai-finance-coach",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,21 +9,46 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2D9CDB"
+      "backgroundColor": "#FFFFFF"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aifinancecoach.app"
+      "bundleIdentifier": "com.aifinancecoach.app",
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-dark.png",
+        "tinted": "./assets/icon.png"
+      },
+      "splash": {
+        "image": "./assets/splash.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#FFFFFF",
+        "dark": {
+          "image": "./assets/splash-dark.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2D9CDB"
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.aifinancecoach.app",
       "permissions": ["CAMERA"],
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "splash": {
+        "image": "./assets/splash.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#FFFFFF",
+        "dark": {
+          "image": "./assets/splash-dark.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

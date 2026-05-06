@@ -89,6 +89,31 @@ Mandatory Disclosures:
     return prompt;
   }
 
+  async stream(
+    messages: AIMessage[],
+    userContext: string | undefined,
+    onChunk: (delta: string) => void
+  ): Promise<void> {
+    const systemMessage = { role: "system" as const, content: this.getSystemPrompt(userContext) };
+    const formattedMessages = messages.map((msg) => ({
+      role: msg.role as "user" | "assistant",
+      content: msg.content,
+    }));
+
+    const stream = await this.client.chat.completions.create({
+      model: this.config.model,
+      messages: [systemMessage, ...formattedMessages] as any,
+      temperature: this.config.temperature || 0.7,
+      max_tokens: this.config.maxTokens || 1000,
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content || "";
+      if (delta) onChunk(delta);
+    }
+  }
+
   getProviderName(): string { return "OpenAI"; }
   isConfigured(): boolean { return !!this.config.apiKey && !!this.config.model; }
 }

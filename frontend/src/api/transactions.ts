@@ -24,9 +24,31 @@ export const deleteTransaction = async (id: string) => {
   return response.data;
 };
 
+export interface ParsedReceipt {
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+  notes: string;
+}
+
+export const parseReceipt = async (
+  imageBase64: string,
+  imageMimeType: string
+): Promise<ParsedReceipt> => {
+  // AI vision calls can take up to 60 s — override the default 30 s timeout
+  const response = await client.post<{ success: boolean; data: ParsedReceipt }>(
+    "/transactions/parse-receipt",
+    { imageBase64, imageMimeType },
+    { timeout: 90_000 }
+  );
+  return response.data.data;
+};
+
 export default {
   getTransactions,
   getTransactionById,
   logTransaction,
   deleteTransaction,
+  parseReceipt,
 };

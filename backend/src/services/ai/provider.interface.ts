@@ -27,6 +27,11 @@ export interface IAIProvider {
     imageBase64?: string,
     imageMimeType?: string
   ): Promise<AIResponse>;
+  stream(
+    messages: AIMessage[],
+    userContext: string | undefined,
+    onChunk: (delta: string) => void
+  ): Promise<void>;
   getProviderName(): string;
   isConfigured(): boolean;
 }

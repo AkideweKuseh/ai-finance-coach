@@ -78,6 +78,7 @@ const LoginScreen = () => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              showToggle
               containerStyle={styles.inputContainer}
             />
             <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate("ForgotPassword")}>

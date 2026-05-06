@@ -22,6 +22,8 @@ const startServer = async () => {
 
     // Start listening on all network interfaces
     const server = app.listen(config.port, "0.0.0.0", () => {
+      // Extend socket timeout for long-running AI requests (receipt parsing, chat)
+      server.setTimeout(120_000);
       console.log("");
       console.log("=".repeat(60));
       console.log("🚀 AI Finance Coach Backend Server");

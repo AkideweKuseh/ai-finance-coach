@@ -8,7 +8,7 @@ import {
   getTransactionById,
   logTransaction,
   deleteTransaction,
-  // getTransactionSuggestions, // Validation logic needs update first
+  parseReceiptWithAI,
 } from "../controllers/transaction.controller";
 import { authenticate } from "../middleware/auth.middleware";
 // import { transactionValidation, validate } from "../middleware/validate.middleware";
@@ -33,7 +33,8 @@ router.get("/", getTransactions);
  * POST /api/transactions/log
  * Log a new transaction
  */
-router.post("/log", logTransaction); // Mounting at /log to match requirements
+router.post("/log", logTransaction);
+router.post("/parse-receipt", parseReceiptWithAI);
 
 /**
  * DELETE /api/transactions/:id

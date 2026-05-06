@@ -62,8 +62,8 @@ export const config = {
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET!,
     refreshSecret: process.env.JWT_REFRESH_SECRET!,
-    accessExpiry: process.env.JWT_ACCESS_EXPIRY || "15m",
-    refreshExpiry: process.env.JWT_REFRESH_EXPIRY || "7d",
+    accessExpiry: process.env.JWT_ACCESS_EXPIRY || "1d",
+    refreshExpiry: process.env.JWT_REFRESH_EXPIRY || "30d",
   },
 
   // AI Provider
@@ -86,8 +86,9 @@ export const config = {
 
   // Rate Limiting
   rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000", 10), // 15 minutes
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100", 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000", 10),      // 1 minute window
+    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "300", 10),  // 300/min general (only in prod)
+    authMaxRequests: parseInt(process.env.RATE_LIMIT_AUTH_MAX || "10", 10),   // 10/min on auth routes
   },
 };
 

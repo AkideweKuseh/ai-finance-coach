@@ -26,6 +26,8 @@ import AllTransactionsScreen from "../screens/AllTransactionsScreen";
 import ScanReceiptScreen from "../screens/ScanReceiptScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
 import WeeklyReportScreen from "../screens/WeeklyReportScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
+import NotificationDetailScreen from "../screens/NotificationDetailScreen";
 
 import { RootStackParamList, MainTabParamList } from "./types";
 import { useAuthStore } from "../stores/authStore";
@@ -104,38 +106,58 @@ const RootNavigator = () => {
   if (isLoading) return null;
 
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <RootStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: "slide_from_right",
+        animationDuration: 280,
+      }}
+    >
       {isAuthenticated ? (
         user?.hasCompletedOnboarding === false ? (
-          <RootStack.Screen name="Onboarding" component={OnboardingScreen} />
+          <RootStack.Screen
+            name="Onboarding"
+            component={OnboardingScreen}
+            options={{ animation: "fade" }}
+          />
         ) : (
           <>
-            <RootStack.Screen name="Main" component={MainTabNavigator} />
+            <RootStack.Screen
+              name="Main"
+              component={MainTabNavigator}
+              options={{ animation: "fade" }}
+            />
             <RootStack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
             <RootStack.Screen
               name="LogTransaction"
               component={LogTransactionScreen}
-              options={{ presentation: "modal" }}
+              options={{ presentation: "modal", animation: "slide_from_bottom", animationDuration: 320 }}
             />
             <RootStack.Screen name="AllTransactions" component={AllTransactionsScreen} />
             <RootStack.Screen
               name="ScanReceipt"
               component={ScanReceiptScreen}
-              options={{ presentation: "modal" }}
+              options={{ presentation: "modal", animation: "slide_from_bottom", animationDuration: 320 }}
             />
             <RootStack.Screen name="ChatInterface" component={ChatInterfaceScreen} />
             <RootStack.Screen name="WeeklyReport" component={WeeklyReportScreen} />
+            <RootStack.Screen name="Notifications" component={NotificationsScreen} />
+            <RootStack.Screen name="NotificationDetail" component={NotificationDetailScreen} />
           </>
         )
       ) : (
-        <RootStack.Screen name="Auth" component={AuthNavigator} />
+        <RootStack.Screen
+          name="Auth"
+          component={AuthNavigator}
+          options={{ animation: "fade" }}
+        />
       )}
     </RootStack.Navigator>
   );
 };
 
 const AppNavigator = () => (
-  <NavigationContainer>
+  <NavigationContainer onUnhandledAction={() => {}}>
     <RootNavigator />
   </NavigationContainer>
 );

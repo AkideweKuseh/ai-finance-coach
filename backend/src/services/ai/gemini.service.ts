@@ -82,6 +82,25 @@ Mandatory Disclosures:
     return prompt;
   }
 
+  async stream(
+    messages: AIMessage[],
+    userContext: string | undefined,
+    onChunk: (delta: string) => void
+  ): Promise<void> {
+    const model = this.client.getGenerativeModel({ model: this.config.model });
+    const systemPrompt = this.getSystemPrompt(userContext);
+    const conversationHistory = messages
+      .map((msg) => `${msg.role === "assistant" ? "model" : "user"}: ${msg.content}`)
+      .join("\n\n");
+    const fullPrompt = `${systemPrompt}\n\n=== Conversation ===\n${conversationHistory}`;
+
+    const result = await model.generateContentStream([{ text: fullPrompt }]);
+    for await (const chunk of result.stream) {
+      const delta = chunk.text();
+      if (delta) onChunk(delta);
+    }
+  }
+
   getProviderName(): string { return "Google Gemini"; }
   isConfigured(): boolean { return !!this.config.apiKey && !!this.config.model; }
 }

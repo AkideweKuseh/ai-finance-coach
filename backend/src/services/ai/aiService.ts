@@ -95,6 +95,20 @@ Please try again in a moment. If the problem persists, contact support.`,
   }
 
   /**
+   * Stream a chat response chunk-by-chunk via the provider's streaming API.
+   */
+  async stream(
+    messages: AIMessage[],
+    userContext: string | undefined,
+    onChunk: (delta: string) => void
+  ): Promise<void> {
+    if (!this.provider.isConfigured()) {
+      throw new Error("AI provider is not properly configured");
+    }
+    await this.provider.stream(messages, userContext, onChunk);
+  }
+
+  /**
    * Generate text from a single prompt
    */
   async generateText(prompt: string): Promise<string> {
@@ -110,25 +124,55 @@ Please try again in a moment. If the problem persists, contact support.`,
   }
 
   /**
-   * Format user profile as context for AI
+   * Format user profile + current-month spending as context for AI.
+   * The AI uses this to answer direct questions about profile, budget, and spending.
    */
-  formatUserContext(user: any): string {
-    if (!user || !user.profile) {
-      return "";
+  formatUserContext(
+    user: any,
+    spendingSummary?: { totalSpent: number; byCategory: Record<string, number>; month: string }
+  ): string {
+    if (!user || !user.profile) return "";
+
+    const { profile, userPrefs } = user;
+    const currency = userPrefs?.currency || "USD";
+    const spendingBudget = profile.monthlyIncome - profile.monthlySavingsTarget;
+
+    const goalLabels: Record<string, string> = {
+      save_emergency: "Build Emergency Fund",
+      pay_debt: "Pay Off Debt",
+      invest: "Start Investing",
+      budget_control: "Control Budget",
+    };
+
+    let ctx = `=== USER PROFILE ===
+Name: ${user.name}
+Age: ${profile.age}
+Monthly Income: ${currency} ${profile.monthlyIncome.toLocaleString()}
+Monthly Savings Target: ${currency} ${profile.monthlySavingsTarget.toLocaleString()}
+Monthly Spending Budget: ${currency} ${spendingBudget.toLocaleString()} (income minus savings target)
+Risk Tolerance: ${profile.riskTolerance}
+Primary Financial Goal: ${goalLabels[profile.primaryGoal] || profile.primaryGoal}
+Tracked Spending Categories: ${profile.spendingCategories.join(", ") || "None set"}
+Preferred Currency: ${currency}
+Notifications — Spending Alerts: ${userPrefs?.spendingAlerts ? "On" : "Off"}, Weekly Report: ${userPrefs?.weeklyReport ? "On" : "Off"}, Check-In: ${userPrefs?.checkIn ? "On" : "Off"}`;
+
+    if (spendingSummary) {
+      const remaining = spendingBudget - spendingSummary.totalSpent;
+      const categoryLines = Object.entries(spendingSummary.byCategory)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, amt]) => `  • ${cat}: ${currency} ${amt.toFixed(2)}`)
+        .join("\n");
+
+      ctx += `\n\n=== CURRENT MONTH SPENDING (${spendingSummary.month}) ===
+Total Spent: ${currency} ${spendingSummary.totalSpent.toFixed(2)}
+Budget Remaining: ${currency} ${remaining.toFixed(2)}
+Spent by Category:
+${categoryLines || "  No transactions recorded yet"}`;
     }
 
-    const { profile } = user;
+    ctx += `\n\nIMPORTANT: When the user asks about their profile, income, savings target, spending budget, spending limits, current spending, categories, currency, or preferences — answer DIRECTLY using the data above. You have their live data; never ask them to check the app.`;
 
-    return `
-User: ${user.name}
-Age: ${profile.age}
-Monthly Income: ${profile.monthlyIncome}
-Risk Tolerance: ${profile.riskTolerance}
-Primary Goal: ${profile.primaryGoal}
-Spending Categories: ${profile.spendingCategories.join(", ") || "None"}
-
-Provide personalized advice based on this financial context.
-`.trim();
+    return ctx;
   }
 }
 

@@ -115,9 +115,9 @@ export const getSpendingSummary = catchAsync(
         topTrigger = Object.keys(triggerCounts).reduce((a, b) => triggerCounts[a] > triggerCounts[b] ? a : b);
     }
     
-    // Simple budget calculation (e.g. monthly income / 30 or default $100)
-    // In production this should be a user setting or environment variable
-    const dailyBudget = user.profile.monthlyIncome ? (user.profile.monthlyIncome / 30) : 100;
+    const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const spendableIncome = Math.max(0, user.profile.monthlyIncome - (user.profile.monthlySavingsTarget ?? 0));
+    const dailyBudget = spendableIncome > 0 ? spendableIncome / daysInMonth : 100;
 
     const summary = {
       date: startOfDay.toISOString(),

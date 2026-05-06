@@ -12,7 +12,14 @@ import { config } from "./environment";
  */
 export const connectDatabase = async (): Promise<void> => {
   try {
-    await mongoose.connect(config.mongoUri);
+    await mongoose.connect(config.mongoUri, {
+      // Prefer IPv4 to avoid ::1 / 127.0.0.1 mismatch on Windows
+      family: 4,
+      // Keep trying to reconnect if the connection drops
+      serverSelectionTimeoutMS: 10_000,
+      socketTimeoutMS: 60_000,
+      heartbeatFrequencyMS: 10_000,
+    });
 
     console.log("✅ MongoDB connected successfully");
     console.log(`📦 Database: ${mongoose.connection.name}`);

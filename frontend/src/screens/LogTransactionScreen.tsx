@@ -11,6 +11,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Dimensions,
 } from "react-native";
 import { useAlertStore } from "../stores/alertStore";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,7 +26,11 @@ import {
 } from "../theme";
 import { ScreenContainer } from "../components/common/ScreenContainer";
 import { useTransactionStore } from "../stores/transactionStore";
+import { useUserStore } from "../stores/userStore";
+import { getCurrencySymbol } from "../utils/currency";
 import { Button } from "../components/common/Button";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const LogTransactionScreen = () => {
   const navigation = useNavigation();
@@ -33,7 +38,9 @@ const LogTransactionScreen = () => {
   const themedColors = useThemedColors();
   const { addTransaction } = useTransactionStore();
   const { showAlert } = useAlertStore();
+  const { user } = useUserStore();
   const prefill = route.params?.prefill;
+  const currencySymbol = getCurrencySymbol(user?.userPrefs?.currency ?? "USD");
 
   const [amount, setAmount] = useState(prefill?.amount?.toString() ?? "");
   const [description, setDescription] = useState(prefill?.description ?? "");
@@ -41,6 +48,11 @@ const LogTransactionScreen = () => {
   const [mood, setMood] = useState("neutral");
   const [trigger, setTrigger] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleAmountBlur = () => {
+    const num = parseFloat(amount);
+    if (!isNaN(num)) setAmount(num.toFixed(2));
+  };
 
   const categories = ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Health", "Other"];
   const moods = ["happy", "neutral", "stressed", "bored", "anxious"];
@@ -83,16 +95,22 @@ const LogTransactionScreen = () => {
         <ScrollView contentContainerStyle={styles.content}>
             {/* Amount Input */}
             <View style={styles.amountContainer}>
-                <Text style={[styles.currencySymbol, { color: themedColors.textPrimary }]}>$</Text>
-                <TextInput 
-                    style={[styles.amountInput, { color: themedColors.textPrimary }]}
-                    placeholder="0.00"
-                    placeholderTextColor={themedColors.textSecondary}
-                    keyboardType="decimal-pad"
-                    value={amount}
-                    onChangeText={setAmount}
-                    autoFocus
-                />
+                <View style={styles.amountRow}>
+                    <Text style={[styles.currencySymbol, { color: themedColors.textSecondary }]}>
+                        {currencySymbol}
+                    </Text>
+                    <TextInput
+                        style={[styles.amountInput, { color: themedColors.textPrimary }]}
+                        placeholder="0.00"
+                        placeholderTextColor={themedColors.textSecondary}
+                        keyboardType="decimal-pad"
+                        value={amount}
+                        onChangeText={setAmount}
+                        onBlur={handleAmountBlur}
+                        autoFocus
+                        textAlign="center"
+                    />
+                </View>
             </View>
 
             {/* Description */}
@@ -211,20 +229,26 @@ const styles = StyleSheet.create({
       padding: spacing.lg,
   },
   amountContainer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: spacing.xl,
+      paddingVertical: spacing.xl,
+  },
+  amountRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
   },
   currencySymbol: {
-      fontSize: 40,
-      fontWeight: '700',
+      fontSize: 28,
+      fontWeight: '300',
       marginRight: 4,
+      lineHeight: 64,
   },
   amountInput: {
-      fontSize: 40,
+      fontSize: 56,
       fontWeight: '700',
-      minWidth: 100,
+      width: SCREEN_WIDTH * 0.55,
+      textAlign: 'center',
+      fontFamily: typography.fontFamily.display,
   },
   inputGroup: {
       marginBottom: spacing.lg,
