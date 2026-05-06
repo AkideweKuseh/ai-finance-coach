@@ -1,106 +1,164 @@
-# AI Diet Consultant App
+# Thrive — AI Financial Behavioral Coach
 
-A **simple, production-ready MVP** of an Android-first AI Diet Consultant app built with React Native (Expo) and Node.js.
+A **production-ready MVP** of an AI-powered financial behavioral coaching app built with React Native (Expo) and Node.js. Thrive helps users understand the *why* behind their spending, not just the *what*.
 
-## 📋 Product Overview
+## Product Overview
 
-**App Type:** Mobile AI Diet Consultant  
-**Platform:** React Native (Expo)  
-**Design Philosophy:** Pixel-perfect implementation of provided UI designs
+**App Type:** Mobile AI Financial Behavioral Coach
+**Platform:** React Native (Expo) — Android-first
+**Design Philosophy:** Pixel-perfect UI with a centralized theme system
+
+### Core Concept
+
+Financial health is treated with the same rigor as physical health. Instead of tracking calories, users track spending. Instead of identifying food triggers, users identify emotional spending triggers. The AI coach uses behavioral finance principles to help users align their spending with their long-term goals.
 
 ### Available Screens
 
-1. **AI Chat / Consult** - Interactive nutrition consultation with AI
-2. **Dashboard / Home** - Daily calorie tracking and macro overview
-3. **Meal / Recipe Detail** - Detailed meal information with ingredients
-4. **Profile & Goals** - User profile and fitness goal management
-5. **Settings** - App preferences and account management
+1. **Landing** — Welcome screen with sign in / sign up entry points
+2. **Onboarding** — 7-step conversational financial profiling (income, goals, risk tolerance)
+3. **Dashboard** — Daily spending vs. budget with emotional buy count and recent transactions
+4. **Log Transaction** — Expense entry with amount, category, mood, and trigger selectors
+5. **Scan Receipt** — AI vision-powered receipt parsing via camera or gallery
+6. **Financial Coach Chat** — Multi-turn AI behavioral coaching with streaming responses
+7. **Chat History** — Browse and resume past coaching conversations
+8. **All Transactions** — Full transaction history with filtering
+9. **Transaction Detail** — Single transaction view with mood/trigger context
+10. **Profile & Goals** — Edit income, savings target, risk tolerance, spending categories
+11. **Weekly Report** — AI-generated weekly spending summary with PDF export
+12. **Notifications** — In-app notification center (spending alerts, weekly reports, check-ins)
+13. **Notification Detail** — Individual notification view
+14. **Settings** — Notification preferences, currency picker, account management
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 
-- **React Native** (Expo) - Cross-platform mobile framework
-- **React Navigation** - Screen navigation
-- **Zustand** - Lightweight state management
-- **Axios** - HTTP client for API calls
-- **expo-secure-store** - Secure JWT token storage
+- **React Native** (Expo) — Cross-platform mobile framework
+- **React Navigation** — Screen navigation with bottom tabs
+- **Zustand** — Lightweight state management
+- **Axios** — HTTP client for API calls
+- **expo-secure-store** — Secure JWT token storage
+- **expo-camera / expo-image-picker** — Receipt scanning
+- **expo-notifications** — Push notification handling
+- **expo-print / expo-sharing** — PDF report export
 
 ### Backend
 
-- **Node.js** + **Express** - REST API server
-- **MongoDB** (Mongoose) - NoSQL database
-- **JWT** - Access & refresh token authentication
-- **bcrypt** - Password hashing
-- **dotenv** - Environment configuration
+- **Node.js** + **Express** — REST API server
+- **MongoDB** (Mongoose) — NoSQL database
+- **JWT** — Access & refresh token authentication
+- **bcrypt** — Password hashing
+- **node-cron** — Scheduled jobs (weekly reports, daily check-ins)
+- **helmet + express-rate-limit** — Security hardening
 
 ### AI Provider (Configurable)
 
-- **OpenAI API** (GPT models)
-- **Google Gemini API**
+- **OpenAI API** (GPT-4o with vision)
+- **Google Gemini API** (Gemini 2.5 Flash with vision)
 
-The AI provider is controlled by a single environment variable, allowing easy switching between providers without code changes.
+Switch providers via a single environment variable. Both support text chat, streaming, and image-based receipt parsing.
 
 ---
 
-## 🎨 Design System
+## Design System
 
-All UI elements follow a **centralized theme system** ensuring consistency and easy customization.
+### Color Palette
 
-### Theme Components
+```
+Primary:   #2D9CDB  (blue — trust & stability)
+Accent:    #F2C94C  (gold — wealth & progress)
+Success:   #27AE60  (green — savings & gains)
+Warning:   #EB5757  (red — overspending)
+```
 
-- **Colors**: Primary, accent, background, surface, text colors
-- **Typography**: Font families, sizes, and weights
-- **Spacing**: Consistent spacing tokens (xs, sm, md, lg, xl)
-- **Border Radius**: Standardized corner radii
-- **Elevation**: Shadow presets
-
-### Dark Mode
-
-Dark mode is the default and fully supported. The theme system enables easy switching between light and dark modes.
-
-### Modifying UI Themes
+### Theme Structure
 
 All theme values are centralized in `frontend/src/theme/`:
 
 ```
 frontend/src/theme/
-├── colors.ts        # Color palette
+├── colors.ts        # Color palette + dark mode variants
 ├── typography.ts    # Font families & sizes
-├── spacing.ts       # Spacing scale
+├── spacing.ts       # Spacing scale (xs → xl)
 ├── radius.ts        # Border radius values
-└── index.ts         # Main theme export
+└── index.ts         # Main theme export + useThemedColors hook
 ```
 
-To change the primary color, simply edit `frontend/src/theme/colors.ts`:
+Dark mode is the default and fully supported throughout the app.
+
+---
+
+## Data Models
+
+### User
 
 ```typescript
-export const colors = {
-  primary: "#2f7f34", // Change this value
-  // ... other colors
-};
+{
+  email: string,
+  password: string,          // bcrypt hashed
+  name: string,
+  age: number,
+  monthlyIncome: number,
+  monthlySavingsTarget: number,
+  riskTolerance: 'conservative' | 'moderate' | 'aggressive',
+  primaryGoal: 'save_emergency' | 'pay_debt' | 'invest' | 'budget_control',
+  spendingCategories: string[],
+  hasCompletedOnboarding: boolean,
+  pushToken: string,
+  userPrefs: {
+    spendingAlerts: boolean,
+    weeklyReport: boolean,
+    checkIn: boolean,
+    currency: string,
+  }
+}
+```
+
+### Transaction
+
+```typescript
+{
+  userId: ObjectId,
+  description: string,
+  amount: number,
+  category: 'essentials' | 'lifestyle' | 'impulse' | 'savings',
+  mood: 'stressed' | 'happy' | 'neutral' | 'bored' | 'anxious',
+  trigger: 'peer_pressure' | 'stress' | 'celebration' | 'habit' | 'none',
+  notes: string,
+  date: Date,
+}
+```
+
+### Daily Spending Summary
+
+```typescript
+{
+  date: string,
+  totalSpent: number,
+  budgetLimit: number,        // derived from monthlyIncome
+  emotionalSpendingCount: number,
+  topTrigger: string,
+  savingsProgress: number,
+  transactions: Transaction[],
+}
 ```
 
 ---
 
-## 📁 Folder Structure
+## Folder Structure
 
 ```
-ai-diet-consultant/
+ai-finance-coach/
 ├── README.md
 ├── .gitignore
+├── Pivot_Prompt_Financial_Coach.md
 ├── frontend/
 │   ├── app.json
 │   ├── package.json
-│   ├── tsconfig.json
-│   ├── babel.config.js
 │   ├── App.tsx
-│   ├── .env.example
 │   └── src/
-│       ├── assets/
-│       │   └── ui-designs/    # Original HTML/image designs (read-only)
 │       ├── theme/
 │       │   ├── colors.ts
 │       │   ├── typography.ts
@@ -109,47 +167,59 @@ ai-diet-consultant/
 │       │   └── index.ts
 │       ├── navigation/
 │       │   ├── AppNavigator.tsx
+│       │   ├── AuthNavigator.tsx
 │       │   └── types.ts
 │       ├── screens/
-│       │   ├── AIChatScreen.tsx
+│       │   ├── LandingScreen.tsx
+│       │   ├── LoginScreen.tsx
+│       │   ├── SignUpScreen.tsx
+│       │   ├── OnboardingScreen.tsx
 │       │   ├── DashboardScreen.tsx
-│       │   ├── MealDetailScreen.tsx
+│       │   ├── LogTransactionScreen.tsx
+│       │   ├── ScanReceiptScreen.tsx
+│       │   ├── ChatInterfaceScreen.tsx
+│       │   ├── ChatHistoryScreen.tsx
+│       │   ├── AllTransactionsScreen.tsx
+│       │   ├── TransactionDetailScreen.tsx
 │       │   ├── ProfileScreen.tsx
-│       │   ├── SettingsScreen.tsx
-│       │   └── AuthScreen.tsx
+│       │   ├── WeeklyReportScreen.tsx
+│       │   ├── NotificationsScreen.tsx
+│       │   ├── NotificationDetailScreen.tsx
+│       │   └── SettingsScreen.tsx
 │       ├── components/
-│       │   ├── common/
-│       │   │   ├── Button.tsx
-│       │   │   ├── Card.tsx
-│       │   │   ├── Input.tsx
-│       │   │   └── ProgressBar.tsx
-│       │   ├── chat/
-│       │   │   ├── MessageBubble.tsx
-│       │   │   ├── QuickReplyChip.tsx
-│       │   │   └── MealCard.tsx
-│       │   └── dashboard/
-│       │       ├── CalorieRing.tsx
-│       │       ├── MacroBar.tsx
-│       │       └── MealSuggestionCard.tsx
+│       │   └── common/
+│       │       ├── Button.tsx
+│       │       ├── Input.tsx
+│       │       ├── AppAlertModal.tsx
+│       │       ├── CurrencyPicker.tsx
+│       │       └── TypingIndicator.tsx
 │       ├── stores/
 │       │   ├── authStore.ts
 │       │   ├── userStore.ts
+│       │   ├── transactionStore.ts
 │       │   ├── chatStore.ts
-│       │   └── mealStore.ts
+│       │   ├── notificationStore.ts
+│       │   ├── alertStore.ts
+│       │   └── themeStore.ts
 │       ├── api/
 │       │   ├── client.ts
 │       │   ├── auth.ts
+│       │   ├── transactions.ts
 │       │   ├── chat.ts
-│       │   ├── meals.ts
-│       │   └── user.ts
+│       │   ├── user.ts
+│       │   ├── notifications.ts
+│       │   └── reports.ts
+│       ├── utils/
+│       │   └── currency.ts
 │       └── types/
 │           ├── user.ts
-│           ├── meal.ts
-│           └── chat.ts
+│           ├── transaction.ts
+│           ├── chat.ts
+│           ├── notification.ts
+│           └── report.ts
 └── backend/
     ├── package.json
     ├── tsconfig.json
-    ├── .env.example
     └── src/
         ├── server.ts
         ├── app.ts
@@ -157,24 +227,26 @@ ai-diet-consultant/
         │   ├── auth.routes.ts
         │   ├── user.routes.ts
         │   ├── chat.routes.ts
-        │   └── meal.routes.ts
+        │   ├── transaction.routes.ts
+        │   └── notification.routes.ts
         ├── controllers/
         │   ├── auth.controller.ts
         │   ├── user.controller.ts
         │   ├── chat.controller.ts
-        │   └── meal.controller.ts
+        │   ├── transaction.controller.ts
+        │   └── notification.controller.ts
         ├── models/
         │   ├── User.model.ts
         │   ├── Chat.model.ts
-        │   └── Meal.model.ts
+        │   ├── Transaction.model.ts
+        │   ├── Notification.model.ts
+        │   └── WeeklyReport.model.ts
         ├── middleware/
         │   ├── auth.middleware.ts
-        │   ├── error.middleware.ts
-        │   └── validate.middleware.ts
-        ├── utils/
-        │   ├── jwt.util.ts
-        │   └── password.util.ts
+        │   └── error.middleware.ts
         ├── services/
+        │   ├── notification.service.ts
+        │   ├── cron.service.ts
         │   └── ai/
         │       ├── provider.interface.ts
         │       ├── openai.service.ts
@@ -187,21 +259,22 @@ ai-diet-consultant/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm/yarn
+- **Node.js** 18+ and npm
 - **MongoDB** (local or Atlas)
 - **Expo CLI** (`npm install -g expo-cli`)
-- API Key for **OpenAI** or **Google Gemini**
+- API key for **OpenAI** or **Google Gemini**
+- (Optional) **Expo Push Token** for push notifications
 
 ### Installation
 
 #### 1. Clone and Install
 
 ```bash
-cd ai-diet-consultant
+cd ai-finance-coach
 
 # Install backend dependencies
 cd backend
@@ -217,43 +290,40 @@ npm install
 **Backend** (`backend/.env`):
 
 ```env
-# Server Configuration
+# Server
 PORT=5000
 NODE_ENV=development
 
 # Database
-MONGODB_URI=mongodb://localhost:27017/ai-diet-consultant
+MONGODB_URI=mongodb://localhost:27017/ai-finance-coach
 
-# JWT Secrets
-JWT_ACCESS_SECRET=your-super-secret-access-key-change-in-production
-JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-in-production
+# JWT
+JWT_ACCESS_SECRET=your-access-secret
+JWT_REFRESH_SECRET=your-refresh-secret
 JWT_ACCESS_EXPIRY=15m
 JWT_REFRESH_EXPIRY=7d
 
-# AI Provider Selection (openai | gemini)
-AI_PROVIDER=openai
-
-# OpenAI Configuration
-OPENAI_API_KEY=sk-your-openai-api-key-here
-OPENAI_MODEL=gpt-4-turbo-preview
-
-# Gemini Configuration
-GEMINI_API_KEY=your-gemini-api-key-here
+# AI Provider (openai | gemini)
+AI_PROVIDER=gemini
+OPENAI_API_KEY=sk-your-openai-key
+OPENAI_MODEL=gpt-4o
+GEMINI_API_KEY=your-gemini-key
 GEMINI_MODEL=gemini-2.5-flash
+
+# Financial Defaults
+DAILY_BUDGET_DEFAULT=100
+EMERGENCY_FUND_MONTHS=3
 ```
 
 **Frontend** (`frontend/.env`):
 
 ```env
-# API Configuration
-API_BASE_URL=http://localhost:5000/api
-APP_ENV=development
+EXPO_PUBLIC_API_URL=http://localhost:5000/api
 ```
 
 #### 3. Start MongoDB
 
 ```bash
-# If using local MongoDB
 mongod
 ```
 
@@ -264,7 +334,7 @@ cd backend
 npm run dev
 ```
 
-The backend API will start on `http://localhost:5000`
+API starts on `http://localhost:5000`
 
 #### 5. Run the Frontend
 
@@ -273,117 +343,182 @@ cd frontend
 npx expo start
 ```
 
-Scan the QR code with Expo Go app (iOS/Android) or press `a` for Android emulator, `i` for iOS simulator.
+Scan the QR code with Expo Go, or press `a` for Android emulator / `i` for iOS simulator.
 
 ---
 
-## 🔄 Switching AI Providers
+## API Endpoints
 
-The app supports both OpenAI and Google Gemini. To switch providers:
+### Auth (`/api/auth`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/signup` | Create account |
+| POST | `/login` | Login, returns tokens |
+| POST | `/refresh` | Refresh access token |
+| POST | `/logout` | Invalidate refresh token |
+
+### Transactions (`/api/transactions`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | List user transactions |
+| POST | `/log` | Log a new transaction |
+| GET | `/:id` | Get transaction by ID |
+| DELETE | `/:id` | Delete transaction |
+| POST | `/parse-receipt` | AI receipt parsing (image upload) |
+
+### User (`/api/user`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/profile` | Get user profile |
+| PUT | `/profile` | Update profile |
+| GET | `/spending-summary` | Daily spending vs. budget |
+| GET | `/reports` | List weekly reports |
+| GET | `/reports/:id` | Get specific weekly report |
+| POST | `/push-token` | Save Expo push token |
+| DELETE | `/account` | Delete account and all data |
+
+### Chat (`/api/chat`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/conversations` | List all conversations |
+| POST | `/conversations` | Start new conversation |
+| GET | `/conversation/:id` | Get conversation with messages |
+| DELETE | `/conversation/:id` | Delete conversation |
+| POST | `/message` | Send message (standard) |
+| POST | `/message-stream` | Send message (SSE streaming) |
+
+### Notifications (`/api/notifications`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | List notifications |
+| GET | `/:id` | Get notification |
+| PATCH | `/:id/read` | Mark as read |
+| PATCH | `/read-all` | Mark all as read |
+
+---
+
+## Switching AI Providers
 
 1. Open `backend/.env`
-2. Change `AI_PROVIDER` to either `openai` or `gemini`
+2. Set `AI_PROVIDER` to `openai` or `gemini`
 3. Ensure the corresponding API key is set
-4. Restart the backend server
+4. Restart the backend
 
-The AI abstraction layer automatically routes requests to the selected provider without any code changes.
+Both providers support text chat, streaming responses, and image-based receipt parsing.
 
 ---
 
-## 🎯 AI Behavior & Safety
+## AI Behavior & Safety
 
-### AI Personality
+### Coach Personality
 
-- Acts strictly as a **nutrition expert**
-- Friendly, supportive, and professional tone
-- Uses light food & health-related emojis (🥗, 🥑, 💪)
-- Provides concise, well-formatted responses
+The AI acts as a **compassionate, non-judgmental financial behavioral coach**:
+
+- Analyzes the emotional and psychological reasons behind spending
+- Uses behavioral finance principles (loss aversion, present bias, mental accounting)
+- Provides actionable strategies to align spending with long-term goals
+- Asks reflective questions to build self-awareness
+- Celebrates financial wins — money shame is counterproductive
 
 ### Safety Rules
 
-- Rejects non-nutrition questions politely
-- Provides **general dietary advice only**
-- Avoids medical diagnosis
-- Includes user profile context in consultations
-- Fallback responses if AI provider fails
+**The AI CAN:**
+- Analyze spending patterns and identify emotional triggers
+- Suggest budgeting frameworks (50/30/20, zero-based, envelope method)
+- Provide general debt reduction strategies
+- Offer behavioral techniques (delay gratification, mindful spending)
 
-### Response Formatting
+**The AI CANNOT:**
+- Provide specific investment recommendations
+- Give tax advice or legal counsel
+- Recommend individual stocks, crypto, or funds
+- Make market performance predictions
+- Access or modify actual bank accounts
 
-- Clear headings and bullet points
-- Short paragraphs for readability
-- Macro breakdowns for meal suggestions
-- Calorie information included
+**Mandatory disclosures** are triggered for investment questions, tax questions, and complex debt situations — directing users to certified professionals.
 
 ---
 
-## 📊 Features
+## Features
 
-### ✅ Authentication
-
+### Authentication
 - Email/password registration and login
 - JWT access & refresh token system
-- Secure token storage (expo-secure-store)
-- Automatic token refresh
+- Secure token storage with expo-secure-store
+- Automatic token refresh on expiry
 
-### ✅ User Profile
+### Behavioral Transaction Logging
+- Amount, description, and category entry
+- Mood selector (stressed, happy, neutral, bored, anxious)
+- Trigger selector (stress, habit, celebration, peer pressure)
+- Optional reflection notes
 
-- Age, height, weight tracking
-- Fitness goals (lose fat, maintain, build muscle)
-- Activity level selection
-- Dietary preferences (vegan, paleo, keto, etc.)
+### AI Receipt Scanning
+- Camera or gallery image input
+- AI vision extracts merchant, amount, and category
+- Editable review before saving
 
-### ✅ AI Chat Consultant
+### Spending Dashboard
+- Daily spending vs. budget progress bar
+- Emotional buy count for the day
+- Top spending trigger
+- Recent transaction list with quick actions
 
-- Real-time nutrition advice
-- Context-aware responses (includes user profile)
-- Chat history persistence
-- Rich media meal cards with macros
-- Quick reply suggestions
+### Financial Coach Chat
+- Multi-turn conversation with full history
+- Streaming responses with typing indicator
+- User financial context injected into every session
+- Persistent conversations across sessions
 
-### ✅ Dashboard
+### Notifications
+- **Spending alert at 80%** of daily budget
+- **Spending alert at 100%** of daily budget
+- **Weekly report** delivered Sunday with AI summary
+- **Daily check-in** if no transactions logged by morning
+- In-app notification center with read/unread state
+- Push notifications via Expo Push API
 
-- Daily calorie tracking with progress ring
-- Macro breakdown (protein, carbs, fat)
-- AI-powered meal recommendations
-- Quick action buttons (Ask Coach, Snap Meal, Text Log)
+### Weekly Reports
+- Total spent, top category, transaction count
+- AI-generated behavioral coaching summary
+- PDF export and share
 
-### ✅ Meal System
+### Profile & Goals
+- Monthly income and savings target
+- Primary goal (emergency fund, debt payoff, invest, budget control)
+- Risk tolerance level
+- Spending category preferences
+- Past weekly reports accessible inline
 
-- Predefined meal database
-- Detailed recipe views with ingredients
-- Step-by-step preparation instructions
-- Macro and calorie information
-- Meal logging to daily totals
-
-### ✅ Settings
-
-- Theme toggle (dark/light mode)
-- Unit preferences (metric/imperial)
-- Notification settings
-- Privacy controls
-- Data export
-
----
-
-## 🧪 Testing
-
-### Backend Tests
-
-```bash
-cd backend
-npm test
-```
-
-### Frontend Tests
-
-```bash
-cd frontend
-npm test
-```
+### Settings
+- Per-notification-type toggles (spending alerts, weekly report, check-in)
+- Currency selector (symbols applied globally)
+- Account deletion with full data purge
 
 ---
 
-## 📦 Building for Production
+## Scheduled Jobs (Cron)
+
+| Job | Schedule | Action |
+|-----|----------|--------|
+| Weekly Report | Sunday midnight | Generate AI report + push notification for all users |
+| Daily Check-In | Daily 8:00 AM | Send check-in push if no transactions logged today |
+
+---
+
+## Security
+
+- Passwords hashed with bcrypt (10 rounds)
+- JWT stored in expo-secure-store (not AsyncStorage)
+- Refresh token rotation on use
+- Rate limiting on all routes (stricter on `/auth`)
+- Helmet middleware for HTTP security headers
+- Environment variables for all secrets
+- No real banking API integration — behavioral tracking only
+
+---
+
+## Building for Production
 
 ### Backend
 
@@ -403,108 +538,68 @@ eas build --platform ios
 
 ---
 
-## 🔐 Security Considerations
-
-- All passwords are hashed with bcrypt (10 rounds)
-- JWT tokens stored securely in expo-secure-store
-- Refresh tokens for extended sessions
-- Environment variables for sensitive data
-- MongoDB connection with authentication
-- Input validation and sanitization
-
----
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Backend won't start
-
-- Check MongoDB is running
-- Verify `.env` file exists with correct values
-- Ensure port 5000 is not in use
+- Confirm MongoDB is running and `MONGODB_URI` is correct
+- Check that port 5000 is not in use
+- Verify `.env` file exists with all required keys
 
 ### Frontend can't connect to API
-
-- Verify `API_BASE_URL` in frontend `.env`
-- For Android emulator, use `http://10.0.2.2:5000/api`
-- For iOS simulator, use `http://localhost:5000/api`
-- For physical device, use your computer's local IP
+- For Android emulator: use `http://10.0.2.2:5000/api`
+- For iOS simulator: use `http://localhost:5000/api`
+- For physical device: use your machine's local IP address
 
 ### AI responses not working
+- Confirm `AI_PROVIDER` is set to `openai` or `gemini`
+- Verify the API key for the active provider
+- Check backend logs for model/quota errors
 
-- Verify `AI_PROVIDER` is set correctly
-- Check API key for the selected provider
-- Review backend logs for error messages
-
----
-
-## 📖 Architecture Decisions
-
-### Why Zustand over Redux?
-
-- Minimal boilerplate
-- Simpler learning curve
-- Sufficient for MVP scope
-- Excellent TypeScript support
-
-### Why Expo over React Native CLI?
-
-- Faster development setup
-- Built-in tooling (navigation, secure storage)
-- Easy testing on physical devices
-- Simplified build process with EAS
-
-### Why MongoDB over PostgreSQL?
-
-- Flexible schema for MVP iteration
-- Easier JSON data handling
-- Better fit for chat history storage
-- Simpler deployment options
-
-### Why JWT over Sessions?
-
-- Stateless authentication
-- Mobile-friendly
-- Scales better for future growth
-- Refresh token pattern for security
+### Receipt scanning fails
+- Confirm the selected AI provider supports vision (both OpenAI and Gemini do)
+- Check image file size (compress if > 5MB)
 
 ---
 
-## 🔮 Future Enhancements (Out of MVP Scope)
+## Architecture Decisions
 
-- Camera-based meal logging (ML vision)
-- Water intake tracking
-- Exercise logging
-- Social features (friends, sharing)
-- Meal planning calendar
-- Grocery list generation
-- Barcode scanning
-- Integration with fitness trackers
-- Multi-language support
-- Push notifications
+**Zustand over Redux** — minimal boilerplate, excellent TypeScript support, sufficient for MVP scope.
 
----
+**Expo over React Native CLI** — faster setup, built-in secure storage, EAS build pipeline.
 
-## 📄 License
+**MongoDB over PostgreSQL** — flexible schema suits behavioral data iteration; JSON-native for chat history.
 
-MIT License - See LICENSE file for details
+**JWT over sessions** — stateless, mobile-friendly, scales well; refresh token pattern balances security with UX.
+
+**Provider abstraction for AI** — OpenAI and Gemini behind a single interface allows zero-code provider switching and cost optimization.
 
 ---
 
-## 👥 Contributing
+## Future Enhancements
 
-This is an MVP project. Contributions welcome but must follow the design-strict principles:
-
-- Match UI designs exactly
-- Use global theme system
-- Keep code minimal and readable
-- Document all features
-
----
-
-## 📞 Support
-
-For questions or issues, please open a GitHub issue or contact the maintainers.
+- Savings goal progress tracking with projections
+- Recurring expense detection and alerts
+- Spending trend charts (weekly/monthly)
+- Bank statement import (CSV/PDF parsing)
+- Multi-currency support with live exchange rates
+- Shared budgets for households
+- Apple/Google Pay transaction capture
+- Gamification (streaks, badges for spending goals)
 
 ---
 
-**Built with ❤️ following design-strict, minimal, and teachable principles.**
+## References
+
+- Thaler, R. H., & Sunstein, C. R. (2008). *Nudge*. Yale University Press.
+- Kahneman, D., & Tversky, A. (1979). Prospect Theory. *Econometrica, 47*(2).
+- Ariely, D. (2008). *Predictably Irrational*. HarperCollins.
+
+---
+
+## License
+
+MIT License — See LICENSE file for details.
+
+---
+
+**Built with a design-strict, minimal, and teachable approach. Financial health starts with understanding yourself.**
