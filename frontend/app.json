@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aifinancecoach.app",
@@ -37,7 +39,10 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.aifinancecoach.app",
-      "permissions": ["CAMERA"],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
       "softwareKeyboardLayoutMode": "pan",
       "splash": {
         "image": "./assets/splash.png",
@@ -53,12 +58,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-secure-store", "expo-image-picker", "expo-notifications"],
+    "plugins": [
+      "expo-secure-store",
+      "expo-image-picker",
+      "expo-notifications"
+    ],
+    "sdkVersion": "54.0.0",
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "445d85c1-699e-4229-a35f-0ab20ad7feb7"
       }
-    },
-    "sdkVersion": "54.0.0"
+    }
   }
 }
