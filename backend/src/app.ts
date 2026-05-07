@@ -25,6 +25,9 @@ import notificationRoutes from "./routes/notification.routes";
 export const createApp = (): Application => {
   const app = express();
 
+  // Trust the first proxy (nginx) so rate-limiter and IP detection work correctly
+  app.set("trust proxy", 1);
+
   // Security middleware
   app.use(helmet());
 

@@ -51,8 +51,8 @@ export const errorHandler = (
     message = "Invalid ID format";
   }
 
-  // Log error in development
-  if (config.isDevelopment) {
+  // Only log unexpected server errors — skip 4xx noise (bot scans, missing routes, etc.)
+  if (statusCode >= 500) {
     console.error("Error:", {
       message: err.message,
       stack: err.stack,
