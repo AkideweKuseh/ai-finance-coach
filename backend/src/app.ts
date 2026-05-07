@@ -81,7 +81,16 @@ export const createApp = (): Application => {
   });
   app.use("/api/auth", authLimiter);
 
-  // Health check endpoint
+  // Root + health check endpoints
+  app.get("/", (req, res) => {
+    res.status(200).json({
+      name: "AI Finance Coach API",
+      status: "ok",
+      version: "1.0.0",
+      docs: "/health",
+    });
+  });
+
   app.get("/health", (req, res) => {
     res.status(200).json({
       status: "ok",
