@@ -31,10 +31,25 @@ export const createApp = (): Application => {
   // Security middleware
   app.use(helmet());
 
-  // CORS configuration
+  // CORS configuration: allows any localhost/127.0.0.1 port + any origins in CORS_ORIGINS
   app.use(
     cors({
-      origin: config.cors.origins,
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, Postman)
+        if (!origin) return callback(null, true);
+
+        // Allow ANY localhost or 127.0.0.1 on ANY port
+        if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+          return callback(null, true);
+        }
+
+        // Allow explicitly listed origins in CORS_ORIGINS (.env)
+        if (config.cors.origins.includes(origin)) {
+          return callback(null, true);
+        }
+
+        return callback(null, false);
+      },
       credentials: true,
     })
   );

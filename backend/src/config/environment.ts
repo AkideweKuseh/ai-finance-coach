@@ -81,7 +81,9 @@ export const config = {
 
   // CORS
   cors: {
-    origins: process.env.CORS_ORIGINS?.split(",") || ["http://localhost:19000"],
+    origins: process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
+      : [],
   },
 
   // Rate Limiting
